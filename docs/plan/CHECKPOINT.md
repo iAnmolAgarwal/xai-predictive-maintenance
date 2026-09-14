@@ -1,48 +1,56 @@
-# Orchestrator checkpoint (auto-maintained; read this first after /compact)
+# Orchestrator checkpoint (auto-maintained; read this first after /compact or resume)
 
-Updated: 2026-09-14 23:40 IST
+Updated: 2026-09-15 00:05 IST — PAUSED on usage limit mid Phase 3 review loop.
 
 ## Where we are
-- Phase 1 (plan) DONE. Phase 2 (infra, data, contracts) DONE and merged into main.
-- `main` at cc8f1a0 (T-FEATURES + T-REPLAY merged, 580 tests locally) but
-  CI is RED: platform ULP tie in exact-rank percentiles
-  (tests/features golden, air_temp_slope_4h). Fix branch fix/features-ci in
-  flight (worktree wt-features-ci); must merge before any other merge.
-- In flight (worktrees under the session scratchpad, `git worktree list`):
-  feat/web-shell (T-WEB-SHELL, still building), feat/model (T-MODEL, Phase 4
-  started early since it only needs features), fix/features-settings (R22).
+- Phase 1, 2 DONE. Phase 3: T-FEATURES and T-REPLAY merged into main.
+- `main` = 5992600 (history rewritten: no AI trailers, author
+  anmolagarwal2625+github@gmail.com = GitHub iAnmolAgarwal; force-pushed).
+  CI on main is RED (platform ULP tie in exact-rank percentiles,
+  tests/features golden `air_temp_slope_4h`, one rank off on Linux).
+- Worktrees under the session scratchpad (`git worktree list`). Builders may
+  have died mid-fix on the usage limit; their uncommitted work is on disk:
+  - wt-features-ci / fix/features-ci (off cc8f1a0, 5 dirty files, no commits
+    yet): the CI fix (rank tolerant to ULP noise, goldens regen, Linux run in
+    docker). Brief in the transcript; fix must merge FIRST.
+  - wt-web-shell / feat/web-shell (7 commits, 23 dirty files): fix pass 1 in
+    progress against scratchpad/reviews/web-shell-code-1.md (5 blockers) and
+    web-shell-ux-1.md (6 blockers). Re-review with code-reviewer AND
+    ux-reviewer after the pass.
+  - wt-features-settings / fix/features-settings (4 commits, clean):
+    APPROVED (features-settings-code-1.md). Merge after the CI fix.
+  - wt-model / feat/model (6 dirty files, no commits): T-MODEL build in
+    progress (Phase 4, started early). Resume by re-briefing a backend-builder
+    to continue from the on-disk state.
 
-## Loop for every branch (unchanged)
-builder -> code-reviewer (+ security-reviewer for api/infra, + ux-reviewer for
-web-*) -> fix pass -> re-review until APPROVED -> `git merge --no-ff` into main
--> push -> remove worktree + delete branch -> check `gh run list`.
-Reviews and builder reports live in scratchpad/reviews/*.md.
-
-## After Phase 3 merges
-Phase 4 per docs/plan/backend.md §5: T-MODEL (needs features), then T-SHAP,
-then T-API (needs shap + replay), T-NODERED (needs api live), and the seven
-T-WEB-* feature tasks (need web-shell + `make contracts`). Phase 5:
-T-WEB-E2E -> T-PERF -> T-DOCS -> final review (+ codex cross-review) -> tag v1.0.0.
+## Resume procedure
+1. `gh auth status`; `git status`; `git worktree list`; check each worktree
+   for dirty files and partial commits before re-briefing any builder.
+2. For a dead builder: spawn the same role with the original brief plus
+   "continue from the existing worktree state; do not start over".
+3. Before merging ANY branch: rewrite it
+   (`git filter-repo --force --refs refs/heads/<branch> --mailmap <mailmap>
+   --message-callback <strip Co-Authored-By/Claude-Session>`) or verify
+   `git log main..<branch> --format='%ae %B'` has only the +github address and
+   no trailers. Then `git merge --no-ff`, gate, push.
+4. Merge order: fix/features-ci -> fix/features-settings -> feat/web-shell
+   (after APPROVED x2) -> feat/model (Phase 4, review first).
+5. Then Phase 4 per docs/plan/backend.md §5: T-SHAP, T-API, T-NODERED, seven
+   T-WEB-* features (code + ux review each). Phase 5: T-WEB-E2E, T-PERF,
+   T-DOCS, fresh-reader, final review + codex, tag v1.0.0.
 
 ## Invariants
 - Every Agent call: named agent type + `model: "opus"`.
-- Builders work in worktrees off main, never in the primary checkout.
-- Fable never writes application code; plan docs and this file are fine.
-- Stop spawning on a 429 session limit; resume after the reset.
-- `caffeinate -dims` runs in the background (pid in `pgrep -lx caffeinate`).
+- NO commit trailers of any kind (user instruction 2026-09-14); repo git
+  config carries the identity. Tell every builder in its brief.
+- Builders work in worktrees; Fable never writes application code.
+- Stop spawning on a 429/usage limit; resume after reset.
+- `caffeinate -dims` should be running (`pgrep -lx caffeinate`).
 
-## Known follow-ups not yet scheduled
-- Data reviewer non-blocking 3: note in xpm.data that band/horizon/Welch
-  constants reconcile against settings (T-FEATURES brief asks for the test).
-- Security reviewer optional items (SHA-pin actions, pip-audit in CI,
-  secrets hook) — revisit in Phase 5 hardening.
-- T-DOCS must mention that compose creates missing bind-mount dirs root-owned.
-
-## Handoffs for T-API (from T-FEATURES / T-REPLAY reviews, 2026-09-14)
-- Catch `ValueError` per row from `OnlineFeatureEngine.update` (null/missing
-  channel) so one bad retained message cannot take the consumer down.
-- Call `OnlineFeatureEngine.reset()` on every new `run_id` (loop/restart).
-- `seq` is the 0-based tick index shared by all machines in a tick; mirror it
-  on RiskMessage/WS frames. `loop_index` counts new runs, not dataset loops.
-- Follow-up branch `fix/features-settings` (R22): default
-  `features.percentile_algorithm: exact` as a Literal, drop `tdigest` dep.
+## Follow-ups not yet scheduled
+- ci.yml: `pnpm/action-setup@v4` has no version and no root packageManager
+  (T-INFRA fix; web-shell fix pass adds packageManager in web/package.json).
+- docker/*.Dockerfile comments still justify build-essential with tdigest.
+- docs/plan/backend.md §3.6 still shows percentile_algorithm: tdigest.
+- T-DOCS: compose creates missing bind-mount dirs root-owned; ADR for R21/R22.
+- Security hardening (SHA-pin actions, pip-audit, secrets hook) in Phase 5.
