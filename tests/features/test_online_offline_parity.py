@@ -635,6 +635,9 @@ def test_online_engine_sustains_five_thousand_rows_per_second(
         return len(messages)
 
     rows = benchmark(replay)
+    if benchmark.stats is None:
+        # --benchmark-disable ran the callable once without timing it.
+        pytest.skip("benchmarks are disabled, so there is no rate to report")
     rows_per_second = rows / benchmark.stats["median"]
     benchmark.extra_info["rows_per_second"] = rows_per_second
     benchmark.extra_info["floor_rows_per_second"] = THROUGHPUT_FLOOR_ROWS_PER_SECOND
