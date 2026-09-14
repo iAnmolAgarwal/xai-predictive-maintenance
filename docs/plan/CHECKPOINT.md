@@ -35,3 +35,12 @@ T-WEB-E2E -> T-PERF -> T-DOCS -> final review (+ codex cross-review) -> tag v1.0
 - Security reviewer optional items (SHA-pin actions, pip-audit in CI,
   secrets hook) — revisit in Phase 5 hardening.
 - T-DOCS must mention that compose creates missing bind-mount dirs root-owned.
+
+## Handoffs for T-API (from T-FEATURES / T-REPLAY reviews, 2026-09-14)
+- Catch `ValueError` per row from `OnlineFeatureEngine.update` (null/missing
+  channel) so one bad retained message cannot take the consumer down.
+- Call `OnlineFeatureEngine.reset()` on every new `run_id` (loop/restart).
+- `seq` is the 0-based tick index shared by all machines in a tick; mirror it
+  on RiskMessage/WS frames. `loop_index` counts new runs, not dataset loops.
+- Follow-up branch `fix/features-settings` (R22): default
+  `features.percentile_algorithm: exact` as a Literal, drop `tdigest` dep.
