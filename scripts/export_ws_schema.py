@@ -53,13 +53,15 @@ def _union_schema(
     return schema, defs
 
 
-def _pin_constant_fields(schema: dict[str, Any]) -> None:
-    """Make constant discriminator fields required rather than defaulted.
+def _pin_defaulted_fields(schema: dict[str, Any]) -> None:
+    """Make defaulted fields required rather than optional.
 
-    ``type`` and ``protocol_version`` carry Python-side defaults so the backend
-    can construct a frame without restating its own name, but they are always on
-    the wire. Leaving them optional would generate ``type?: "hello"`` in
-    TypeScript and weaken the discriminated union the frontend switches on.
+    ``type``, ``protocol_version`` and ``schema_version`` carry Python-side
+    defaults so the backend can construct a frame without restating constants it
+    already owns, but a default is *always* materialised on the wire in
+    serialization mode. Leaving them optional would generate ``type?: "hello"``
+    and ``schema_version?: string`` in TypeScript, weakening both the
+    discriminated union the frontend switches on and every frame it reads.
     """
     for definition in schema.values():
         properties = definition.get("properties")
@@ -67,10 +69,11 @@ def _pin_constant_fields(schema: dict[str, Any]) -> None:
             continue
         required: list[str] = definition.setdefault("required", [])
         for name, prop in properties.items():
-            if "const" in prop and "default" in prop:
-                del prop["default"]
-                if name not in required:
-                    required.append(name)
+            if "default" not in prop:
+                continue
+            del prop["default"]
+            if name not in required:
+                required.append(name)
 
 
 def _strip_titles(node: Any) -> None:
@@ -105,7 +108,7 @@ def build_document() -> dict[str, Any]:
     defs: dict[str, Any] = {**server_defs, **client_defs}
     defs["ServerFrame"] = server
     defs["ClientFrame"] = client
-    _pin_constant_fields(defs)
+    _pin_defaulted_fields(defs)
     for definition in defs.values():
         for prop in definition.get("properties", {}).values():
             _strip_titles(prop)

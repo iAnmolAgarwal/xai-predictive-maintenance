@@ -747,7 +747,6 @@
           "type": "string"
         },
         "schema_version": {
-          "default": 1,
           "minimum": 1,
           "type": "integer"
         },
@@ -782,7 +781,8 @@
         "rows_published",
         "rows_total",
         "machine_count",
-        "ts"
+        "ts",
+        "schema_version"
       ],
       "title": "ReplayState",
       "type": "object"
@@ -837,7 +837,6 @@
           "type": "string"
         },
         "schema_version": {
-          "default": 1,
           "minimum": 1,
           "type": "integer"
         },
@@ -877,6 +876,7 @@
         "rows_total",
         "machine_count",
         "ts",
+        "schema_version",
         "type"
       ],
       "title": "ReplayStateFrame",
