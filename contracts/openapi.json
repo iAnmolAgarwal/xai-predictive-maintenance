@@ -547,19 +547,6 @@
         "title": "GlobalImportance",
         "type": "object"
       },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "title": "Detail",
-            "type": "array"
-          }
-        },
-        "title": "HTTPValidationError",
-        "type": "object"
-      },
       "HealthResponse": {
         "additionalProperties": false,
         "description": "``GET /api/health``.",
@@ -1752,46 +1739,6 @@
         "title": "TelemetrySeries",
         "type": "object"
       },
-      "ValidationError": {
-        "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "title": "Location",
-            "type": "array"
-          },
-          "msg": {
-            "title": "Message",
-            "type": "string"
-          },
-          "type": {
-            "title": "Error Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError",
-        "type": "object"
-      },
       "WhatIfRequest": {
         "additionalProperties": false,
         "description": "``POST /api/whatif`` body.",
@@ -2115,13 +2062,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Request validation failed"
           }
         },
         "summary": "List Alerts",
@@ -2169,13 +2116,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Request validation failed"
           }
         },
         "summary": "Get Alert",
@@ -2223,13 +2170,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Request validation failed"
           }
         },
         "summary": "Compare Models",
@@ -2291,13 +2238,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Request validation failed"
           }
         },
         "summary": "Get Explanation",
@@ -2320,6 +2267,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Request validation failed"
           }
         },
         "summary": "Get Config",
@@ -2363,13 +2320,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Request validation failed"
           }
         },
         "summary": "Put Config",
@@ -2392,6 +2349,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Request validation failed"
           }
         },
         "summary": "Get Health",
@@ -2443,13 +2410,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Request validation failed"
           }
         },
         "summary": "List Machines",
@@ -2497,13 +2464,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Request validation failed"
           }
         },
         "summary": "Get Machine",
@@ -2596,13 +2563,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Request validation failed"
           }
         },
         "summary": "Get Importance",
@@ -2629,6 +2596,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Request validation failed"
           }
         },
         "summary": "List Models",
@@ -2655,6 +2632,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Request validation failed"
           }
         },
         "summary": "List Plants",
@@ -2677,6 +2664,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Request validation failed"
           }
         },
         "summary": "Get Replay",
@@ -2712,13 +2709,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Request validation failed"
           }
         },
         "summary": "Post Replay Command",
@@ -2811,13 +2808,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Request validation failed"
           }
         },
         "summary": "Get Risk",
@@ -2868,13 +2865,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Request validation failed"
           }
         },
         "summary": "State At",
@@ -2985,13 +2982,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Request validation failed"
           }
         },
         "summary": "Get Telemetry",
@@ -3037,13 +3034,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Request validation failed"
           }
         },
         "summary": "Whatif",

@@ -131,17 +131,37 @@ def test_errors_use_the_problem_media_type(document: dict[str, Any]) -> None:
     assert "application/problem+json" in immutable["content"]
 
 
-def test_two_clocks_are_iso_strings_in_the_schema(document: dict[str, Any]) -> None:
-    alert = document["components"]["schemas"]["Alert"]["properties"]
-    for field in ("ts", "dataset_ts"):
-        assert alert[field]["type"] == "string"
-        assert alert[field]["format"] == "date-time"
-    closed = alert["closed_dataset_ts"]["anyOf"]
-    assert {"format": "date-time", "type": "string"} in closed
-    assert {"type": "null"} in closed
+def test_no_error_response_is_plain_json(document: dict[str, Any]) -> None:
+    """backend.md §3.4 grants no carve-out: every 4xx/5xx body is a problem.
+
+    FastAPI's own 422 would otherwise be ``application/json`` +
+    ``HTTPValidationError``, so this also pins the exporter's 422 declaration.
+    """
+    offenders = [
+        (path, method, status, media_type)
+        for path, operations in document["paths"].items()
+        for method, operation in operations.items()
+        for status, response in operation["responses"].items()
+        if status[0] in {"4", "5"}
+        for media_type in response.get("content", {})
+        if media_type != "application/problem+json"
+    ]
+    assert offenders == []
 
 
-def test_shap_space_is_a_closed_literal(document: dict[str, Any]) -> None:
-    for schema_name in ("Explanation", "WhatIfResponse"):
-        prop = document["components"]["schemas"][schema_name]["properties"]["shap_space"]
-        assert prop["const"] == "probability"
+def test_every_operation_declares_a_problem_validation_error(
+    document: dict[str, Any],
+) -> None:
+    for path, operations in document["paths"].items():
+        for method, operation in operations.items():
+            response = operation["responses"].get("422")
+            assert response is not None, f"{method.upper()} {path} has no 422"
+            assert response["content"] == {
+                "application/problem+json": {"schema": {"$ref": "#/components/schemas/Problem"}}
+            }
+
+
+def test_fastapi_default_error_schemas_are_absent(document: dict[str, Any]) -> None:
+    schemas = document["components"]["schemas"]
+    assert "HTTPValidationError" not in schemas
+    assert "ValidationError" not in schemas

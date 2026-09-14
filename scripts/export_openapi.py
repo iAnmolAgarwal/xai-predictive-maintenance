@@ -24,7 +24,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import FastAPI, Query
+from fastapi import APIRouter, FastAPI, Query
 from fastapi import Path as PathParam
 from fastapi.openapi.utils import get_openapi
 
@@ -67,8 +67,19 @@ DEFAULT_MAX_SERIES_POINTS = _SETTINGS.api.max_series_points
 
 DEFAULT_OUT = Path("contracts") / "openapi.json"
 
-NOT_FOUND = {404: {"model": Problem, "description": "No such resource"}}
-IMMUTABLE = {409: {"model": Problem, "description": "Key is not in mutable_keys"}}
+#: Declared on every operation via the router default. FastAPI would otherwise
+#: emit its own 422 as `application/json` + `HTTPValidationError`, which breaks
+#: the rule that every error body in this system is an RFC-9457 problem
+#: (backend.md §3.4). Declaring 422 ourselves suppresses that default.
+VALIDATION_FAILED: dict[int | str, dict[str, Any]] = {
+    422: {"model": Problem, "description": "Request validation failed"}
+}
+NOT_FOUND: dict[int | str, dict[str, Any]] = {
+    404: {"model": Problem, "description": "No such resource"}
+}
+IMMUTABLE: dict[int | str, dict[str, Any]] = {
+    409: {"model": Problem, "description": "Key is not in mutable_keys"}
+}
 
 DESCRIPTION = """
 REST surface of the explainable predictive-maintenance backend.
@@ -89,31 +100,34 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
+#: Every route hangs off this router so `VALIDATION_FAILED` applies uniformly.
+router = APIRouter(responses=VALIDATION_FAILED)
+
 
 def _unimplemented() -> Any:
     """Every handler in the skeleton. T-API supplies the real implementations."""
     raise NotImplementedError("scripts/export_openapi.py only declares the contract")
 
 
-@app.get("/api/health", response_model=HealthResponse, tags=["system"])
+@router.get("/api/health", response_model=HealthResponse, tags=["system"])
 def get_health() -> Any:
     """Liveness, served model, current run and replay state."""
     return _unimplemented()
 
 
-@app.get("/api/plants", response_model=list[Plant], tags=["plants"])
+@router.get("/api/plants", response_model=list[Plant], tags=["plants"])
 def list_plants() -> Any:
     """Every plant, with its canonical channel order. Bare list, no envelope."""
     return _unimplemented()
 
 
-@app.get("/api/machines", response_model=list[MachineSummary], tags=["machines"])
+@router.get("/api/machines", response_model=list[MachineSummary], tags=["machines"])
 def list_machines(plant_id: Annotated[PlantId | None, Query()] = None) -> Any:
     """Tile payloads for a plant. Bare list, no envelope."""
     return _unimplemented()
 
 
-@app.get(
+@router.get(
     "/api/machines/{machine_id}",
     response_model=MachineDetail,
     responses=NOT_FOUND,
@@ -124,7 +138,7 @@ def get_machine(machine_id: Annotated[MachineId, PathParam()]) -> Any:
     return _unimplemented()
 
 
-@app.get(
+@router.get(
     "/api/machines/{machine_id}/importance",
     response_model=GlobalImportance,
     responses=NOT_FOUND,
@@ -140,7 +154,7 @@ def get_importance(
     return _unimplemented()
 
 
-@app.get(
+@router.get(
     "/api/telemetry",
     response_model=TelemetrySeries,
     responses=NOT_FOUND,
@@ -157,7 +171,7 @@ def get_telemetry(
     return _unimplemented()
 
 
-@app.get("/api/risk", response_model=RiskSeries, responses=NOT_FOUND, tags=["series"])
+@router.get("/api/risk", response_model=RiskSeries, responses=NOT_FOUND, tags=["series"])
 def get_risk(
     machine_id: Annotated[MachineId, Query()],
     since: Annotated[datetime | None, Query()] = None,
@@ -168,7 +182,7 @@ def get_risk(
     return _unimplemented()
 
 
-@app.get("/api/alerts", response_model=AlertPage, tags=["alerts"])
+@router.get("/api/alerts", response_model=AlertPage, tags=["alerts"])
 def list_alerts(
     plant_id: Annotated[PlantId | None, Query()] = None,
     machine_id: Annotated[MachineId | None, Query()] = None,
@@ -183,13 +197,13 @@ def list_alerts(
     return _unimplemented()
 
 
-@app.get("/api/alerts/{alert_id}", response_model=Alert, responses=NOT_FOUND, tags=["alerts"])
+@router.get("/api/alerts/{alert_id}", response_model=Alert, responses=NOT_FOUND, tags=["alerts"])
 def get_alert(alert_id: Annotated[AlertId, PathParam()]) -> Any:
     """One alert, open or closed."""
     return _unimplemented()
 
 
-@app.get(
+@router.get(
     "/api/alerts/{alert_id}/explanation",
     response_model=Explanation,
     responses=NOT_FOUND,
@@ -203,7 +217,7 @@ def get_explanation(
     return _unimplemented()
 
 
-@app.get(
+@router.get(
     "/api/alerts/{alert_id}/compare",
     response_model=ModelComparison,
     responses=NOT_FOUND,
@@ -214,7 +228,7 @@ def compare_models(alert_id: Annotated[AlertId, PathParam()]) -> Any:
     return _unimplemented()
 
 
-@app.get("/api/state_at", response_model=PlantSnapshot, tags=["plants"])
+@router.get("/api/state_at", response_model=PlantSnapshot, tags=["plants"])
 def state_at(
     plant_id: Annotated[PlantId, Query()],
     dataset_ts: Annotated[datetime, Query()],
@@ -223,40 +237,45 @@ def state_at(
     return _unimplemented()
 
 
-@app.post("/api/whatif", response_model=WhatIfResponse, responses=NOT_FOUND, tags=["explanations"])
+@router.post(
+    "/api/whatif", response_model=WhatIfResponse, responses=NOT_FOUND, tags=["explanations"]
+)
 def whatif(body: WhatIfRequest) -> Any:
     """Recompute probability, SHAP and gradients under feature overrides."""
     return _unimplemented()
 
 
-@app.get("/api/config", response_model=ConfigResponse, tags=["config"])
+@router.get("/api/config", response_model=ConfigResponse, tags=["config"])
 def get_config() -> Any:
     """The full flattened settings tree plus the mutable-key list."""
     return _unimplemented()
 
 
-@app.put("/api/config", response_model=ConfigResponse, responses=IMMUTABLE, tags=["config"])
+@router.put("/api/config", response_model=ConfigResponse, responses=IMMUTABLE, tags=["config"])
 def put_config(body: ConfigPatch) -> Any:
     """Patch mutable settings; mints a new run id and broadcasts a config frame."""
     return _unimplemented()
 
 
-@app.get("/api/replay", response_model=ReplayState, tags=["replay"])
+@router.get("/api/replay", response_model=ReplayState, tags=["replay"])
 def get_replay() -> Any:
     """Current transport state."""
     return _unimplemented()
 
 
-@app.post("/api/replay/command", response_model=ReplayState, tags=["replay"])
+@router.post("/api/replay/command", response_model=ReplayState, tags=["replay"])
 def post_replay_command(body: ReplayCommand) -> Any:
     """The only authoritative transport control (R11)."""
     return _unimplemented()
 
 
-@app.get("/api/models", response_model=list[ModelInfo], tags=["models"])
+@router.get("/api/models", response_model=list[ModelInfo], tags=["models"])
 def list_models() -> Any:
     """Registry metadata for both families. Bare list, no envelope."""
     return _unimplemented()
+
+
+app.include_router(router)
 
 
 def _use_problem_media_type(document: dict[str, Any]) -> None:
