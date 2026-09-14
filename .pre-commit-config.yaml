@@ -1,0 +1,37 @@
+# Local mirror of the checks CI runs, so drift is caught before a push.
+#   uv run pre-commit install   (done for you by `make setup`)
+
+default_language_version:
+  python: python3.12
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.7
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+        # Compose and the CI workflow use no custom tags; anything that needs
+        # them would be a smell here.
+        args: [--allow-multiple-documents]
+      - id: check-added-large-files
+        # 5 MB matches the committed-processed-data budget in R2.
+        args: [--maxkb=5120]
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy --strict (backend)
+        # Local rather than mirrors-mypy so it typechecks against the project's
+        # own locked environment, exactly as `make typecheck` and CI do.
+        entry: uv run mypy --strict backend
+        language: system
+        types: [python]
+        pass_filenames: false
