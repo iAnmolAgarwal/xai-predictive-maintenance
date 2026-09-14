@@ -32,6 +32,20 @@ the estimator it names.
 Warmup. Below ``features.percentile_warmup_samples`` observations of a given
 feature the rank is ``NaN``, never ``0`` (§3.1, §3.6) — and the count is kept
 per feature, so a 24 h feature that is still null warms up later than a 1 h one.
+
+**Two estimators, one sample apart.** :meth:`PercentileBank.update` returns an
+*inclusive rank* — ``count(history <= value) / n * 100``, an empirical CDF —
+while :meth:`PercentileBank.quantile` inverts the relationship with
+:func:`numpy.nanpercentile`, which interpolates linearly between order
+statistics. They are not exact inverses: round-tripping a value through
+``quantile(95)`` and back through the rank stays within one sample's worth of
+rank, ``100 / n`` percentile points. That is 0.12 points at the 834 rows an
+``ai4i`` machine reaches, and 2 points at the 48-sample warmup floor where the
+rank is first reported at all. Small either way, but ``xpm.explain`` prints both in
+one sentence — "stayed above its 95th percentile" comes from the rank, "sat at
+the 97th percentile" is the rank too, while the ``{threshold}`` value beside it
+comes from :meth:`quantile` — so the difference is documented rather than
+discovered.
 """
 
 from __future__ import annotations
