@@ -1,0 +1,11 @@
+[run]
+branch = True
+source = backend/xpm
+omit =
+    backend/xpm/*/__main__.py
+    scripts/entrypoint_*.py
+    scripts/train.py
+
+[report]
+show_missing = True
+skip_covered = True

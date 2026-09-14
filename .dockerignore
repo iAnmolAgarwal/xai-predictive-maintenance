@@ -1,0 +1,36 @@
+# Only the backend package, its lockfile and the config tree ever enter an
+# image. Everything below is either irrelevant to a container or large.
+.git
+.github
+.venv
+venv
+**/__pycache__
+**/*.py[cod]
+*.egg-info
+.mypy_cache
+.ruff_cache
+.pytest_cache
+.coverage
+coverage.xml
+htmlcov
+
+web/node_modules
+web/dist
+web/coverage
+web/playwright-report
+web/test-results
+node_modules
+
+data/raw
+data/*.db
+data/*.db-*
+models/registry
+reports
+docs
+tests
+nodered/node_modules
+
+.DS_Store
+.idea
+.vscode
+.claude
