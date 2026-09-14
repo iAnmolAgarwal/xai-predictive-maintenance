@@ -8,7 +8,8 @@
  * wholesale from them. The only frame the client ever sends is `pong`.
  */
 import { wsSilenceTimeoutMs } from '@/config';
-import type { PlantId, ServerFrame } from '@/contracts';
+import { announce } from '@/lib/a11y';
+import type { PlantId, ServerFrame, ServerFrameType } from '@/contracts';
 import { parseDatasetTs } from '@/lib/formatters';
 import { useStore } from '@/store';
 import {
@@ -137,7 +138,13 @@ export function createWsClient(deps: WsClientDeps = {}): WsClient {
     if (closedByUs || plant === null) return;
     clearLivenessTimer();
     attempt += 1;
+    const previous = useStore.getState().connection.status;
     useStore.getState().setConnectionStatus('reconnecting', attempt);
+    // Announce the transition, not every attempt: a sighted user watches the
+    // pill change colour, and a screen-reader user is told once.
+    if (previous !== 'reconnecting') {
+      announce('Live connection lost. Reconnecting.');
+    }
     const delay = backoffDelayMs(attempt - 1, random);
     clearReconnectTimer();
     reconnectTimer = setTimeout(() => {
@@ -155,9 +162,11 @@ export function createWsClient(deps: WsClientDeps = {}): WsClient {
       .setConnectionStatus(attempt === 0 ? 'connecting' : 'reconnecting', attempt);
 
     next.onopen = () => {
+      const reconnected = useStore.getState().connection.status === 'reconnecting';
       attempt = 0;
       const state = useStore.getState();
       state.setConnectionStatus('open', 0);
+      if (reconnected) announce('Live connection restored.');
       state.setConnectionError(null);
       state.noteMessageReceived(now());
       startLiveness();
@@ -343,19 +352,26 @@ function commitBatch(batch: StagedCommit): void {
   if (!Number.isNaN(batch.datasetTsMs)) store.setDatasetTsMs(batch.datasetTsMs);
 }
 
-/** The ten frame types the protocol defines; anything else is ignored. */
-const SERVER_FRAME_TYPES: ReadonlySet<string> = new Set<ServerFrame['type']>([
-  'hello',
-  'snapshot',
-  'telemetry',
-  'risk',
-  'alert',
-  'explanation',
-  'replay_state',
-  'config',
-  'ping',
-  'error',
-]);
+/**
+ * The frame types the protocol defines. Written as a `Record<ServerFrameType, true>`
+ * so it is exhaustive by construction: adding a member to the generated union
+ * fails the type check here as well as in the switch above, and a type handled in
+ * one place can never be silently dropped in the other.
+ */
+const HANDLED_FRAMES: Record<ServerFrameType, true> = {
+  hello: true,
+  snapshot: true,
+  telemetry: true,
+  risk: true,
+  alert: true,
+  explanation: true,
+  replay_state: true,
+  config: true,
+  ping: true,
+  error: true,
+};
+
+const SERVER_FRAME_TYPES: ReadonlySet<string> = new Set(Object.keys(HANDLED_FRAMES));
 
 function isServerFrame(value: unknown): value is ServerFrame {
   if (typeof value !== 'object' || value === null) return false;
