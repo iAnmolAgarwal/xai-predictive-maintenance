@@ -11,19 +11,30 @@ FROM nodered/node-red:4.1.0
 RUN npm install --no-audit --no-fund --no-update-notifier \
     @flowfuse/node-red-dashboard@1.31.0
 
+# The base image bakes a stock /data/flows.json ("Flow 1"). Docker copies that
+# file into an empty named volume on first mount, so a "does /data/flows.json
+# exist?" guard would be permanently false and the repo's flow would never be
+# seeded. Delete it at build time, before any volume can capture it.
+USER root
+RUN rm -f /data/flows.json
+USER node-red
+
 # Seed the persistent userDir from the repo's flow on first start, then hand
-# over to the stock Node-RED entrypoint. Once the volume has a flows.json,
-# edits deployed from the editor win and are never overwritten.
+# over to the stock Node-RED entrypoint. The marker file — not flows.json —
+# is what records "this volume has been seeded", so edits deployed from the
+# editor (including deleting every flow) are never overwritten on restart.
 COPY <<'SEED' /usr/src/node-red/seed-flows.sh
 #!/bin/sh
 set -e
-if [ -f /flows/flow.json ] && [ ! -f /data/flows.json ]; then
+marker=/data/.xpm-seeded
+if [ ! -f "$marker" ] && [ -f /flows/flow.json ]; then
   cp /flows/flow.json /data/flows.json
   echo "seeded /data/flows.json from /flows/flow.json"
-fi
-if [ -f /flows/settings.js ] && [ ! -f /data/settings.js ]; then
-  cp /flows/settings.js /data/settings.js
-  echo "seeded /data/settings.js from /flows/settings.js"
+  if [ -f /flows/settings.js ]; then
+    cp /flows/settings.js /data/settings.js
+    echo "seeded /data/settings.js from /flows/settings.js"
+  fi
+  date -u +%Y-%m-%dT%H:%M:%SZ > "$marker"
 fi
 exec "$@"
 SEED
