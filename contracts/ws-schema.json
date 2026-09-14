@@ -1,0 +1,1345 @@
+{
+  "$defs": {
+    "Alert": {
+      "additionalProperties": false,
+      "description": "An opened alert (backend.md §3.4.2).\n\nDefined here rather than in :mod:`xpm.contracts.rest` because the MQTT\n``AlertMessage`` and the WebSocket ``alert`` frame both extend it, and\n``rest`` imports from ``mqtt``. It is re-exported from both\n:mod:`xpm.contracts.rest` and :mod:`xpm.contracts`.",
+      "properties": {
+        "alert_id": {
+          "pattern": "^alt_[0-9a-f]{16}$",
+          "type": "string"
+        },
+        "closed_dataset_ts": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dataset_ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "explanation_id": {
+          "pattern": "^exp_[0-9a-f]{16}$",
+          "type": "string"
+        },
+        "headline": {
+          "type": "string"
+        },
+        "machine_display_name": {
+          "type": "string"
+        },
+        "machine_id": {
+          "pattern": "^(ai4i|ims)-\\d{2}$",
+          "type": "string"
+        },
+        "model_id": {
+          "pattern": "^(lgbm|rf)@\\d+\\.\\d+\\.\\d+$",
+          "type": "string"
+        },
+        "plant_id": {
+          "enum": [
+            "ai4i",
+            "ims"
+          ],
+          "type": "string"
+        },
+        "probability": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "run_id": {
+          "pattern": "^run_[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "medium",
+            "high",
+            "critical"
+          ],
+          "type": "string"
+        },
+        "top_feature": {
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "alert_id",
+        "run_id",
+        "plant_id",
+        "machine_id",
+        "machine_display_name",
+        "dataset_ts",
+        "ts",
+        "model_id",
+        "probability",
+        "severity",
+        "headline",
+        "top_feature",
+        "explanation_id",
+        "closed_dataset_ts"
+      ],
+      "title": "Alert",
+      "type": "object"
+    },
+    "AlertFrame": {
+      "additionalProperties": false,
+      "description": "The REST ``Alert`` model spread into a frame.",
+      "properties": {
+        "alert_id": {
+          "pattern": "^alt_[0-9a-f]{16}$",
+          "type": "string"
+        },
+        "closed_dataset_ts": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dataset_ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "explanation_id": {
+          "pattern": "^exp_[0-9a-f]{16}$",
+          "type": "string"
+        },
+        "headline": {
+          "type": "string"
+        },
+        "machine_display_name": {
+          "type": "string"
+        },
+        "machine_id": {
+          "pattern": "^(ai4i|ims)-\\d{2}$",
+          "type": "string"
+        },
+        "model_id": {
+          "pattern": "^(lgbm|rf)@\\d+\\.\\d+\\.\\d+$",
+          "type": "string"
+        },
+        "plant_id": {
+          "enum": [
+            "ai4i",
+            "ims"
+          ],
+          "type": "string"
+        },
+        "probability": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "run_id": {
+          "pattern": "^run_[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "medium",
+            "high",
+            "critical"
+          ],
+          "type": "string"
+        },
+        "top_feature": {
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "type": {
+          "const": "alert",
+          "type": "string"
+        }
+      },
+      "required": [
+        "alert_id",
+        "run_id",
+        "plant_id",
+        "machine_id",
+        "machine_display_name",
+        "dataset_ts",
+        "ts",
+        "model_id",
+        "probability",
+        "severity",
+        "headline",
+        "top_feature",
+        "explanation_id",
+        "closed_dataset_ts",
+        "type"
+      ],
+      "title": "AlertFrame",
+      "type": "object"
+    },
+    "ChannelSpec": {
+      "additionalProperties": false,
+      "description": "One sensor channel. The 16 rows live in :mod:`xpm.contracts.channels`.",
+      "properties": {
+        "display_name": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "nominal_max": {
+          "type": "number"
+        },
+        "nominal_min": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "vibration_like": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "display_name",
+        "unit",
+        "vibration_like",
+        "nominal_min",
+        "nominal_max"
+      ],
+      "title": "ChannelSpec",
+      "type": "object"
+    },
+    "ClientFrame": {
+      "additionalProperties": false,
+      "description": "Any frame a client may send to the server. `pong` is the only one.",
+      "properties": {
+        "ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "type": {
+          "const": "pong",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ts",
+        "type"
+      ],
+      "title": "ClientFrame",
+      "type": "object"
+    },
+    "ConfigFrame": {
+      "additionalProperties": false,
+      "description": "Pushed after a successful ``PUT /api/config``.",
+      "properties": {
+        "mutable_keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "pattern": "^run_[0-9a-f]{12}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "type": {
+          "const": "config",
+          "type": "string"
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "values": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "schema_version",
+        "run_id",
+        "values",
+        "mutable_keys",
+        "updated_at",
+        "type"
+      ],
+      "title": "ConfigFrame",
+      "type": "object"
+    },
+    "ErrorFrame": {
+      "additionalProperties": false,
+      "description": "Protocol or backpressure error.",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type": {
+          "const": "error",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "request_id",
+        "type"
+      ],
+      "title": "ErrorFrame",
+      "type": "object"
+    },
+    "ExplanationFrame": {
+      "additionalProperties": false,
+      "description": "The REST ``Explanation`` spread into a frame, sent immediately after its\n``alert`` frame and within the same second.",
+      "properties": {
+        "alert_id": {
+          "pattern": "^alt_[0-9a-f]{16}$",
+          "type": "string"
+        },
+        "base_value": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "caveat": {
+          "type": "string"
+        },
+        "contributions": {
+          "items": {
+            "$ref": "#/$defs/ShapContribution"
+          },
+          "type": "array"
+        },
+        "dataset_ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "explanation_id": {
+          "pattern": "^exp_[0-9a-f]{16}$",
+          "type": "string"
+        },
+        "machine_id": {
+          "pattern": "^(ai4i|ims)-\\d{2}$",
+          "type": "string"
+        },
+        "model_id": {
+          "pattern": "^(lgbm|rf)@\\d+\\.\\d+\\.\\d+$",
+          "type": "string"
+        },
+        "model_kind": {
+          "enum": [
+            "lgbm",
+            "rf"
+          ],
+          "type": "string"
+        },
+        "n_features": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "other_contributions_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "other_contributions_shap": {
+          "type": "number"
+        },
+        "output_value": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "probability": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "sentence": {
+          "type": "string"
+        },
+        "sentence_spans": {
+          "items": {
+            "$ref": "#/$defs/SentenceSpan"
+          },
+          "type": "array"
+        },
+        "shap_space": {
+          "const": "probability",
+          "type": "string"
+        },
+        "type": {
+          "const": "explanation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "explanation_id",
+        "alert_id",
+        "machine_id",
+        "model_id",
+        "model_kind",
+        "shap_space",
+        "dataset_ts",
+        "base_value",
+        "output_value",
+        "probability",
+        "contributions",
+        "other_contributions_shap",
+        "other_contributions_count",
+        "n_features",
+        "sentence",
+        "sentence_spans",
+        "caveat",
+        "type"
+      ],
+      "title": "ExplanationFrame",
+      "type": "object"
+    },
+    "HelloFrame": {
+      "additionalProperties": false,
+      "description": "Always the first frame on every connect (R10).",
+      "properties": {
+        "plant": {
+          "$ref": "#/$defs/Plant"
+        },
+        "protocol_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "run_id": {
+          "pattern": "^run_[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "server_time": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "type": {
+          "const": "hello",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "server_time",
+        "plant",
+        "type",
+        "protocol_version"
+      ],
+      "title": "HelloFrame",
+      "type": "object"
+    },
+    "MachineSnapshot": {
+      "additionalProperties": false,
+      "description": "A ``snapshot`` machine entry: the REST summary plus a seed sample.",
+      "properties": {
+        "dataset_ts": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "machine_id": {
+          "pattern": "^(ai4i|ims)-\\d{2}$",
+          "type": "string"
+        },
+        "open_alert_id": {
+          "anyOf": [
+            {
+              "pattern": "^alt_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plant_id": {
+          "enum": [
+            "ai4i",
+            "ims"
+          ],
+          "type": "string"
+        },
+        "probability": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "risk_sparkline": {
+          "items": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "healthy",
+            "watch",
+            "alert",
+            "offline"
+          ],
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "machine_id",
+        "plant_id",
+        "display_name",
+        "status",
+        "probability",
+        "dataset_ts",
+        "open_alert_id",
+        "risk_sparkline",
+        "values"
+      ],
+      "title": "MachineSnapshot",
+      "type": "object"
+    },
+    "PingFrame": {
+      "additionalProperties": false,
+      "description": "Server heartbeat, every ``api.ws_ping_seconds``, **regardless of replay\nstate**, so a paused replay never looks like a dead socket (R11).",
+      "properties": {
+        "ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "type": {
+          "const": "ping",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ts",
+        "type"
+      ],
+      "title": "PingFrame",
+      "type": "object"
+    },
+    "Plant": {
+      "additionalProperties": false,
+      "description": "A selectable plant. ``channels`` is the canonical order (§3.1).",
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "channels": {
+          "items": {
+            "$ref": "#/$defs/ChannelSpec"
+          },
+          "type": "array"
+        },
+        "dataset_end": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "dataset_start": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "demo_machine_id": {
+          "pattern": "^(ai4i|ims)-\\d{2}$",
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "machine_count": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "plant_id": {
+          "enum": [
+            "ai4i",
+            "ims"
+          ],
+          "type": "string"
+        },
+        "row_interval_seconds": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "unavailable_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "plant_id",
+        "display_name",
+        "machine_count",
+        "available",
+        "unavailable_reason",
+        "channels",
+        "dataset_start",
+        "dataset_end",
+        "row_interval_seconds",
+        "demo_machine_id"
+      ],
+      "title": "Plant",
+      "type": "object"
+    },
+    "ReplayState": {
+      "additionalProperties": false,
+      "description": "``xpm/control/replay/state`` — QoS 1, **retained**.\n\nA late subscriber therefore gets the transport state immediately.",
+      "properties": {
+        "dataset_end": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "dataset_start": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "dataset_ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "loop": {
+          "type": "boolean"
+        },
+        "loop_index": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "machine_count": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "plant_id": {
+          "enum": [
+            "ai4i",
+            "ims"
+          ],
+          "type": "string"
+        },
+        "playing": {
+          "type": "boolean"
+        },
+        "rows_published": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "rows_total": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "run_id": {
+          "pattern": "^run_[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "speed": {
+          "enum": [
+            0.5,
+            1.0,
+            5.0,
+            20.0
+          ],
+          "type": "number"
+        },
+        "ts": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "plant_id",
+        "seed",
+        "speed",
+        "playing",
+        "loop",
+        "loop_index",
+        "dataset_ts",
+        "dataset_start",
+        "dataset_end",
+        "rows_published",
+        "rows_total",
+        "machine_count",
+        "ts",
+        "schema_version"
+      ],
+      "title": "ReplayState",
+      "type": "object"
+    },
+    "ReplayStateFrame": {
+      "additionalProperties": false,
+      "description": "The retained MQTT ``ReplayState`` broadcast to dashboard clients.",
+      "properties": {
+        "dataset_end": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "dataset_start": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "dataset_ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "loop": {
+          "type": "boolean"
+        },
+        "loop_index": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "machine_count": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "plant_id": {
+          "enum": [
+            "ai4i",
+            "ims"
+          ],
+          "type": "string"
+        },
+        "playing": {
+          "type": "boolean"
+        },
+        "rows_published": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "rows_total": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "run_id": {
+          "pattern": "^run_[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "schema_version": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "speed": {
+          "enum": [
+            0.5,
+            1.0,
+            5.0,
+            20.0
+          ],
+          "type": "number"
+        },
+        "ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "type": {
+          "const": "replay_state",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "plant_id",
+        "seed",
+        "speed",
+        "playing",
+        "loop",
+        "loop_index",
+        "dataset_ts",
+        "dataset_start",
+        "dataset_end",
+        "rows_published",
+        "rows_total",
+        "machine_count",
+        "ts",
+        "schema_version",
+        "type"
+      ],
+      "title": "ReplayStateFrame",
+      "type": "object"
+    },
+    "RiskFrame": {
+      "additionalProperties": false,
+      "description": "Batched risk updates.\n\nThere is deliberately **no** frame-level ``dataset_ts``: each update carries\nits own, and the store's dataset clock is advanced from those.",
+      "properties": {
+        "plant_id": {
+          "enum": [
+            "ai4i",
+            "ims"
+          ],
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "type": {
+          "const": "risk",
+          "type": "string"
+        },
+        "updates": {
+          "items": {
+            "$ref": "#/$defs/RiskUpdate"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "plant_id",
+        "ts",
+        "updates",
+        "type"
+      ],
+      "title": "RiskFrame",
+      "type": "object"
+    },
+    "RiskUpdate": {
+      "additionalProperties": false,
+      "description": "One machine's score inside a batched ``risk`` frame.",
+      "properties": {
+        "alert_id": {
+          "anyOf": [
+            {
+              "pattern": "^alt_[0-9a-f]{16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dataset_ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "machine_id": {
+          "pattern": "^(ai4i|ims)-\\d{2}$",
+          "type": "string"
+        },
+        "model_id": {
+          "pattern": "^(lgbm|rf)@\\d+\\.\\d+\\.\\d+$",
+          "type": "string"
+        },
+        "probability": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "status": {
+          "enum": [
+            "healthy",
+            "watch",
+            "alert",
+            "offline"
+          ],
+          "type": "string"
+        },
+        "top_features": {
+          "items": {
+            "$ref": "#/$defs/TopFeature"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "machine_id",
+        "dataset_ts",
+        "probability",
+        "status",
+        "alert_id",
+        "model_id",
+        "top_features"
+      ],
+      "title": "RiskUpdate",
+      "type": "object"
+    },
+    "SentenceSpan": {
+      "additionalProperties": false,
+      "description": "Character offsets linking a slice of ``sentence`` to a waterfall bar.",
+      "properties": {
+        "end": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "feature": {
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "feature"
+      ],
+      "title": "SentenceSpan",
+      "type": "object"
+    },
+    "ServerFrame": {
+      "description": "Any frame the server may send to a client.",
+      "discriminator": {
+        "mapping": {
+          "alert": "#/$defs/AlertFrame",
+          "config": "#/$defs/ConfigFrame",
+          "error": "#/$defs/ErrorFrame",
+          "explanation": "#/$defs/ExplanationFrame",
+          "hello": "#/$defs/HelloFrame",
+          "ping": "#/$defs/PingFrame",
+          "replay_state": "#/$defs/ReplayStateFrame",
+          "risk": "#/$defs/RiskFrame",
+          "snapshot": "#/$defs/SnapshotFrame",
+          "telemetry": "#/$defs/TelemetryFrame"
+        },
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/HelloFrame"
+        },
+        {
+          "$ref": "#/$defs/SnapshotFrame"
+        },
+        {
+          "$ref": "#/$defs/TelemetryFrame"
+        },
+        {
+          "$ref": "#/$defs/RiskFrame"
+        },
+        {
+          "$ref": "#/$defs/AlertFrame"
+        },
+        {
+          "$ref": "#/$defs/ExplanationFrame"
+        },
+        {
+          "$ref": "#/$defs/ReplayStateFrame"
+        },
+        {
+          "$ref": "#/$defs/ConfigFrame"
+        },
+        {
+          "$ref": "#/$defs/PingFrame"
+        },
+        {
+          "$ref": "#/$defs/ErrorFrame"
+        }
+      ],
+      "title": "ServerFrame"
+    },
+    "ShapContribution": {
+      "additionalProperties": false,
+      "description": "One waterfall bar, in probability space (R3).",
+      "properties": {
+        "consecutive_hours": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "direction": {
+          "enum": [
+            "up",
+            "down"
+          ],
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "feature": {
+          "type": "string"
+        },
+        "framing": {
+          "enum": [
+            "percentile",
+            "threshold",
+            "trend",
+            "consecutive"
+          ],
+          "type": "string"
+        },
+        "percentile": {
+          "anyOf": [
+            {
+              "maximum": 100.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sentence": {
+          "type": "string"
+        },
+        "shap": {
+          "type": "number"
+        },
+        "stat": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "window_hours": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "feature",
+        "display_name",
+        "shap",
+        "value",
+        "unit",
+        "percentile",
+        "window_hours",
+        "stat",
+        "framing",
+        "consecutive_hours",
+        "threshold",
+        "direction",
+        "sentence"
+      ],
+      "title": "ShapContribution",
+      "type": "object"
+    },
+    "SnapshotFrame": {
+      "additionalProperties": false,
+      "description": "Always the second frame, and re-sent after any ``seek``.\n\nThe dashboard must be fully populated from ``hello`` + ``snapshot`` alone.",
+      "properties": {
+        "active_alerts": {
+          "items": {
+            "$ref": "#/$defs/Alert"
+          },
+          "type": "array"
+        },
+        "dataset_ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "machines": {
+          "items": {
+            "$ref": "#/$defs/MachineSnapshot"
+          },
+          "type": "array"
+        },
+        "plant_id": {
+          "enum": [
+            "ai4i",
+            "ims"
+          ],
+          "type": "string"
+        },
+        "replay_state": {
+          "$ref": "#/$defs/ReplayState"
+        },
+        "run_id": {
+          "pattern": "^run_[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "type": {
+          "const": "snapshot",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plant_id",
+        "run_id",
+        "dataset_ts",
+        "machines",
+        "active_alerts",
+        "replay_state",
+        "type"
+      ],
+      "title": "SnapshotFrame",
+      "type": "object"
+    },
+    "TelemetryFrame": {
+      "additionalProperties": false,
+      "description": "Batched telemetry, coalesced per plant tick and flushed every\n``api.ws_flush_ms``.",
+      "properties": {
+        "dataset_ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "plant_id": {
+          "enum": [
+            "ai4i",
+            "ims"
+          ],
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "type": {
+          "const": "telemetry",
+          "type": "string"
+        },
+        "updates": {
+          "items": {
+            "$ref": "#/$defs/TelemetryUpdate"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "plant_id",
+        "dataset_ts",
+        "ts",
+        "updates",
+        "type"
+      ],
+      "title": "TelemetryFrame",
+      "type": "object"
+    },
+    "TelemetryUpdate": {
+      "additionalProperties": false,
+      "description": "One machine's row inside a batched ``telemetry`` frame.",
+      "properties": {
+        "dataset_ts": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "machine_id": {
+          "pattern": "^(ai4i|ims)-\\d{2}$",
+          "type": "string"
+        },
+        "seq": {
+          "type": "integer"
+        },
+        "values": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "machine_id",
+        "dataset_ts",
+        "seq",
+        "values"
+      ],
+      "title": "TelemetryUpdate",
+      "type": "object"
+    },
+    "TopFeature": {
+      "additionalProperties": false,
+      "description": "A preview contribution, in probability space (R3).",
+      "properties": {
+        "feature": {
+          "type": "string"
+        },
+        "shap": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "feature",
+        "shap"
+      ],
+      "title": "TopFeature",
+      "type": "object"
+    }
+  },
+  "$id": "https://xpm.local/contracts/ws-schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "WebSocket protocol for /ws?plant_id=<ai4i|ims>. The query parameter is the complete subscription; there is no subscribe frame and no transport control over this socket. Frames are JSON text, one object per frame, discriminated on `type`. On every connect the server sends `hello` then `snapshot`. Clients must ignore unknown server frame types without erroring.",
+  "properties": {
+    "client_frame": {
+      "$ref": "#/$defs/ClientFrame"
+    },
+    "server_frame": {
+      "$ref": "#/$defs/ServerFrame"
+    }
+  },
+  "required": [
+    "server_frame",
+    "client_frame"
+  ],
+  "title": "XpmWsProtocol",
+  "type": "object",
+  "x-protocol-version": 1
+}

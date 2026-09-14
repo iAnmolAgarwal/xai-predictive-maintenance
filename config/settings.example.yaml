@@ -1,0 +1,143 @@
+# XPM settings — annotated reference copy of `config/settings.yaml`.
+#
+# Every value here is the shipped default, byte-for-byte identical in meaning to
+# `config/settings.yaml` (a contract test loads both and asserts the parsed
+# trees are equal). The difference is the prose: each key documents the
+# alternatives that were considered and what changes if you pick one.
+#
+# Override any leaf from the environment with the XPM_ prefix and "__" as the
+# nested delimiter — XPM_ALERTING__PROBABILITY_THRESHOLD=0.7,
+# XPM_REPLAY__SPEED=5, XPM_PATHS__DATA_DIR=/tmp/xpm. Env vars beat the file.
+# Point the loader at a different file entirely with XPM_CONFIG_FILE.
+
+schema_version: 1              # bump only together with the wire format and contracts/*.json
+
+paths:
+  data_dir: data               # relative paths resolve against the repo root; absolute paths are used as-is
+  db_path: data/xpm.db         # any writable path; ":memory:" is not supported (WAL + multi-process)
+  models_dir: models/registry  # `make train` writes here; `current` is a relative symlink
+  reports_dir: reports         # git-ignored except for .gitkeep
+
+mqtt:
+  host: mosquitto              # "mosquitto" inside compose, "localhost" when running on the host
+  port: 1883                   # 1883 TCP; the broker also serves websockets on 9001 for Node-RED
+  keepalive_seconds: 30        # lower reacts to broker loss faster, higher is quieter on the wire
+  topic_root: xpm              # change only if another system already owns the "xpm" prefix
+  reconnect_min_seconds: 1.0   # first backoff step; raise on a flaky broker
+  reconnect_max_seconds: 30.0  # backoff ceiling; raise for long broker outages
+
+plants:
+  default: ai4i                # "ai4i" (12 machines) or "ims" (4 bearings)
+  ai4i:
+    enabled: true              # false removes the plant from GET /api/plants entirely
+    machine_count: 12          # 12 gives every tile ~3.4 % failure prevalence; fewer machines means longer per-machine series
+    row_interval_seconds: 300  # 300 s makes 834 rows ≈ 69.5 h, comfortably longer than the 24 h window
+    dataset_start: "2026-01-01T00:00:00Z"  # any ISO-8601 UTC instant; fixed so ids and timestamps are reproducible
+    demo_machine_id: ai4i-03   # any ai4i-NN; it is the tile the README GIF deep-links (R13)
+  ims:
+    enabled: true              # false is the honest state when data/processed/ims is missing
+    test_set: 2                # 1, 2 or 3; only test set 2 is processed and committed
+    machine_count: 4           # test set 2 has 4 bearing columns
+    row_interval_seconds: 600  # the real 10-minute acquisition cadence; do not fake a faster one
+    sample_rate_hz: 20000      # the dataset's real rate; changing it invalidates the band energies
+    samples_per_file: 20480    # 1.024 s per file, as recorded
+    label_horizon_hours: 24    # 6 h gives too few positives, 72 h labels healthy data (ADR-023)
+    welch_nperseg: 4096        # 4096 gives ~4.9 Hz resolution; smaller blurs the 3 kHz band
+    welch_overlap: 0.5         # 0.0 is faster and noisier; 0.75 is smoother and slower
+    demo_machine_id: ims-01    # bearing 1 is the one that fails in test set 2 (R13)
+    source_url: "https://phm-datasets.s3.amazonaws.com/NASA/4.+Bearings.zip"  # the historical nasa.gov links are dead
+    source_sha256: "21001ac266c465f5d345ec42d7b508c6a6328487fd9d4d7774422dd5ea10ad83"  # a mismatch deletes the file and fails loudly
+    source_bytes: 1075597174   # used by the resumable Range fetch to know when it is done
+
+features:
+  windows_hours: [1, 4, 24]    # more windows multiply the feature count linearly; 24 h is the longest and drives warm-up
+  stats: [mean, std, min, max, p95, slope, ewma]  # dropping a stat shrinks the model vector and the waterfall vocabulary
+  ewma_halflife_hours: 1.0     # smaller reacts faster and is noisier
+  slope_unit: per_hour         # per_hour keeps the trend sentence readable; per_minute makes the numbers tiny
+  slope_relative_when_mean_nonzero: true  # false always renders absolute units per hour
+  slope_zero_eps: 1.0e-12      # the guard that stops the %/h form dividing by ~0
+  min_window_coverage: 0.6     # 1.0 is strict and nulls features after any gap; 0.0 never nulls
+  percentile_levels: [50, 75, 90, 95, 99]  # patchable at runtime; 95 is what the assignment sentence quotes
+  percentile_warmup_samples: 48  # 48 samples = 4 h at the AI4I cadence; lower gives noisier percentiles
+  percentile_algorithm: tdigest  # exact percentiles need unbounded memory per machine
+  percentile_compression: 200    # higher is more accurate and larger; 100 is the usual floor
+  streak_percentile: 95        # the percentile the "consecutive hours" sentence is measured against
+  streak_min_hours: 1.0        # raise it to stop short blips being framed as streaks
+
+model:
+  served: lgbm                 # "lgbm" or "rf"; the other family is still trained for the comparison view
+  seed: 42                     # any int; identical seed + config reproduces alert ids exactly (R5)
+  test_size: 0.2               # 0.1 trains on more data, 0.3 gives a steadier PR curve
+  split: grouped_time          # grouped_time avoids machine leakage; a random split would inflate every metric
+  # There is no `calibration` key, on purpose. A post-hoc isotonic/Platt layer would
+  # put a second probability on screen and the SHAP waterfall would no longer close on
+  # the number the user reads. Fix calibration in training instead (R16, ADR-016).
+  shap:
+    background_rows: 256       # more rows are more faithful and slower; TreeExplainer cost is linear here
+    background_seed: 1337      # any int; fixed so the same alert always yields the same bars
+    feature_perturbation: interventional  # tree_path_dependent is faster but disagrees with EVALUATION.md
+    model_output: probability  # the only supported value: bars must sum to the on-screen probability (R3)
+  lgbm:
+    n_estimators: 400          # more rounds fit harder and slow SHAP down
+    learning_rate: 0.05        # lower needs more rounds
+    num_leaves: 31             # raise for capacity, at overfitting risk
+    min_child_samples: 20      # raise to regularise
+    subsample: 0.9             # lower adds variance-reducing noise
+    colsample_bytree: 0.8      # lower decorrelates trees
+    class_weight: balanced     # null trains on the raw imbalance and under-predicts failures
+  rf:
+    n_estimators: 500          # the comparison model; more trees are steadier and slower
+    max_depth: 12              # null grows unbounded trees and makes TreeExplainer slow
+    min_samples_leaf: 5        # raise to regularise
+    class_weight: balanced_subsample  # "balanced" weights once globally instead of per bootstrap
+  evaluation:
+    target_precision: 0.80     # the precision at which recall is reported
+    calibration_bins: 10       # 20 bins is finer and noisier; diagnostic only, never served
+
+alerting:
+  probability_threshold: 0.60  # patchable; lower fires more alerts and more false positives
+  watch_threshold: 0.35        # patchable; must stay below probability_threshold
+  consecutive_rows_to_open: 2  # patchable; 1 is twitchy, 3 delays every alert by a row
+  consecutive_rows_to_close: 3 # patchable; raise to stop alerts flapping closed and open
+  cooldown_minutes: 60         # patchable; dataset-time silence window per machine
+  severity_bands:              # patchable; must stay monotonically increasing
+    medium: 0.60               # usually equal to probability_threshold
+    high: 0.75                 # the band the demo alert lands in
+    critical: 0.90             # reserve for the genuinely dire
+
+explanation:
+  top_k: 8                     # patchable; more bars is a busier waterfall, fewer hides real contributors
+  top_k_preview: 3             # chips on the plant floor; raising it grows every risk message
+  top_k_whatif: 5              # sliders offered; each one costs two extra model evaluations for its gradient
+  max_sentence_features: 2     # 1 is terser, 3 makes the sentence unwieldy
+  min_abs_shap: 0.001          # 0.01 would swallow meaningful bars in probability space
+  # `caveat` is required on every Explanation and WhatIfResponse and is rendered
+  # under the sentence (R13). Reword it to taste; do not remove it or blank it.
+  caveat: >
+    SHAP attributions describe how this model arrived at this score. They are
+    associations learned from historical data, not proof of physical cause.
+
+replay:
+  seed: 42                     # any int; same seed + same speed + unmodified config ⇒ same ids (R5)
+  base_rate_hz: 2.0            # ticks/s at 1x; raise for a faster demo at more SQLite write pressure
+  speed: 1.0                   # must be one of allowed_speeds; not patchable via PUT /api/config (R12)
+  allowed_speeds: [0.5, 1.0, 5.0, 20.0]  # CONTRACT: edit ReplayCommand.speed in backend/xpm/contracts/mqtt.py in the same change and re-run `make contracts`
+  autostart: true              # false leaves the publisher paused until a play command arrives
+  loop: true                   # false ends the run at dataset_end; the e2e overlay sets false (R12)
+  publish_batch: 12            # machines per tick; keep it >= the largest plant's machine_count
+
+api:
+  host: 0.0.0.0                # 127.0.0.1 to refuse connections from outside the container
+  port: 8000                   # the port docker-compose publishes
+  cors_origins: ["http://localhost:5173", "http://localhost:4173"]  # add an origin here rather than widening to "*"
+  ws_flush_ms: 100             # lower is smoother and costs more frames; higher batches harder
+  ws_queue_max: 512            # per connection; on overflow the oldest telemetry/risk frames drop, never alerts
+  ws_ping_seconds: 10          # the frontend derives its silence timeout as 2.5x this
+  offline_after_seconds: 30    # shorter marks paused machines offline sooner
+  sparkline_points: 60         # the tile sparkline ring length the frontend reads from the payload
+  max_series_points: 2000      # the LTTB cap; higher is more faithful and heavier to draw
+  history_retention_rows: 500000  # per table; lower keeps data/xpm.db small on long runs
+
+logging:
+  level: INFO                  # DEBUG for wire-level tracing, WARNING for a quiet demo
+  json: true                   # false switches structlog to the human console renderer
