@@ -44,7 +44,9 @@ describe('TopBar', () => {
     useStore.getState().setPlants([plant]);
     renderWithRouter(<TopBar railCollapsed={false} onToggleRail={() => {}} />);
 
-    expect(screen.getByTestId('plant-select')).toHaveTextContent(plant.display_name);
+    expect(screen.getByTestId('plant-readout')).toHaveTextContent(plant.display_name);
+    // `plant-select` always means a real control, never a label.
+    expect(screen.queryByTestId('plant-select')).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 

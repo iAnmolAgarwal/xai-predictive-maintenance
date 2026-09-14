@@ -15,7 +15,10 @@
   /* ── Text ────────────────────────────────────────── */
   --c-text:          #E6EAF2;   /* 14.8:1 on bg */
   --c-text-muted:    #9BA6B8;   /*  7.1:1 on bg */
-  --c-text-faint:    #6B7688;   /*  4.6:1 on bg — never for body copy */
+  --c-text-faint:    #7A8496;   /*  5.19:1 on bg, 4.84:1 on surface-1,
+                                    4.52:1 on surface-2 — measured, never for
+                                    body copy. The plan's #6B7688 measured
+                                    4.26:1 on bg and failed the §6.6 gate. */
 
   /* ── Semantic state (the only saturated colours) ──── */
   --c-healthy:       #2DD4A7;   /* teal-green; 9.2:1 on --c-bg  */
@@ -52,7 +55,11 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* 1.200 minor-third scale, 14px base */
-  --t-xs:   0.694rem;  /* 11.1px  labels, axis ticks   */
+  --t-xs:   0.694rem;  /* 9.7px   axis ticks, dense numerics */
+  /* §6.2 annotates --t-xs as 11.1px, which holds at a 16px root; at the mandated
+     14px root the ratio lands at 9.7px. Micro-labels use this explicit 11px so
+     the smallest text in the app is the size the scale claims. */
+  --t-label: 11px;     /* 11px    all-caps micro-labels */
   --t-sm:   0.833rem;  /* 13.3px  secondary, caveat    */
   --t-base: 1rem;      /* 14px    html{font-size:14px}; body copy */
   --t-md:   1.200rem;  /* 16.8px  card titles          */

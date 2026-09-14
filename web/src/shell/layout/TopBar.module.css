@@ -2,6 +2,7 @@
   display: flex;
   align-items: center;
   gap: var(--s-4);
+  min-width: 0;
   height: var(--topbar-h);
   padding: 0 var(--s-4);
   border-bottom: 1px solid var(--c-border);
@@ -12,11 +13,16 @@
   display: flex;
   align-items: center;
   gap: var(--s-3);
+  min-width: 0;
   font-weight: var(--fw-semibold);
   letter-spacing: var(--tracking-caps);
 }
 
 .singlePlant {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--t-sm);
   color: var(--c-text-muted);
 }
@@ -32,6 +38,65 @@
   display: flex;
   align-items: center;
   gap: var(--s-4);
+  min-width: 0;
+}
+
+/* Narrow windows shed readouts in priority order. The rail toggle is the one
+   control that must survive: below 1440 px the drawer is the only way to see
+   alerts at all (R8). */
+@media (max-width: 900px) {
+  .transport,
+  .runReadout {
+    display: none;
+  }
+
+  .readouts {
+    gap: var(--s-2);
+  }
+
+  .topBar {
+    gap: var(--s-2);
+    padding: 0 var(--s-2);
+  }
+}
+
+@media (max-width: 600px) {
+  .clock,
+  .brandName {
+    display: none;
+  }
+
+  /* The plant name yields space before the pill and the rail toggle do: at this
+     width the toggle is the only route to the alert rail (R8). Both controls
+     survive as glyphs with their accessible names intact. */
+  .plantSelect {
+    max-width: 38vw;
+  }
+
+  .pillLabel,
+  .toggleLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Phone-width desktop windows: the irreducible set is plant, connection and the
+   rail toggle, and all three still fit without a horizontal scrollbar. */
+@media (max-width: 520px) {
+  .plantSelect {
+    max-width: 30vw;
+    padding-right: var(--s-4);
+  }
+
+  .brand,
+  .readouts {
+    gap: var(--s-1);
+  }
 }
 
 .readout,
@@ -42,7 +107,7 @@
 }
 
 .readoutLabel {
-  font-size: var(--t-xs);
+  font-size: var(--t-label);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--c-text-faint);
