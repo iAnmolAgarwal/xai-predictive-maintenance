@@ -67,6 +67,10 @@ RAW_CHANNELS: Final[tuple[str, ...]] = (
 )
 
 
+class FetchError(RuntimeError):
+    """Neither the ucimlrepo wrapper nor the direct UCI zip produced a frame."""
+
+
 def _canonical_key(column: str) -> str:
     """Strip the ``[K]``/``[rpm]`` unit suffix and normalise case and spacing."""
     head = column.split("[", 1)[0]
@@ -147,7 +151,8 @@ def fetch_raw(destination: Path | None = None) -> tuple[pd.DataFrame, str, str]:
     """Fetch AI4I, cache the raw CSV, and return ``(frame, source_url, sha256)``.
 
     ``ucimlrepo`` is the documented path; the direct UCI zip is the fallback so
-    the step still works when the API wrapper is unavailable.
+    the step still works when the API wrapper is unavailable. When both fail,
+    :class:`FetchError` reports each underlying error and chains the first one.
     """
     target_dir = destination if destination is not None else raw_dir()
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -156,12 +161,18 @@ def fetch_raw(destination: Path | None = None) -> tuple[pd.DataFrame, str, str]:
     source_url = UCIML_SOURCE
     try:
         frame = _fetch_via_ucimlrepo()
-    except Exception:  # any wrapper failure falls back to the direct zip
+    except Exception as exc:  # any wrapper failure falls back to the direct zip
         source_url = AI4I_URL
-        archive = cached_file(AI4I_CACHE_FILENAME)
-        if archive is None:
-            archive = download(AI4I_URL, target_dir / AI4I_CACHE_FILENAME)
-        frame = _read_csv_from_zip(archive)
+        try:
+            archive = cached_file(AI4I_CACHE_FILENAME)
+            if archive is None:
+                archive = download(AI4I_URL, target_dir / AI4I_CACHE_FILENAME)
+            frame = _read_csv_from_zip(archive)
+        except Exception as fallback_exc:
+            raise FetchError(
+                f"ai4i: ucimlrepo failed with {exc!r} and the {AI4I_URL} fallback "
+                f"failed with {fallback_exc!r}"
+            ) from exc
 
     frame.to_csv(csv_path, index=False)
     frame.to_parquet(target_dir / RAW_PARQUET_NAME, engine="pyarrow", index=False)

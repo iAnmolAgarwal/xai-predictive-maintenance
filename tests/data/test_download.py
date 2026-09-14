@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import hashlib
 import re
+import shutil
 import subprocess
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 
 import httpx
@@ -22,7 +24,7 @@ BODY = b"".join(bytes([i % 251]) for i in range(4096))
 BODY_SHA = hashlib.sha256(BODY).hexdigest()
 
 
-def _factory(transport: httpx.MockTransport) -> object:
+def _factory(transport: httpx.MockTransport) -> Callable[[], httpx.Client]:
     def build() -> httpx.Client:
         return httpx.Client(transport=transport)
 
@@ -45,7 +47,7 @@ def test_fresh_download_writes_verified_file(tmp_path: Path) -> None:
         URL,
         dest,
         expected_sha256=BODY_SHA,
-        client_factory=_factory(httpx.MockTransport(handler)),  # type: ignore[arg-type]
+        client_factory=_factory(httpx.MockTransport(handler)),
     )
     assert result == dest
     assert dest.read_bytes() == BODY
@@ -65,7 +67,7 @@ def test_existing_verified_file_is_not_refetched(tmp_path: Path) -> None:
         URL,
         dest,
         expected_sha256=BODY_SHA,
-        client_factory=_factory(httpx.MockTransport(handler)),  # type: ignore[arg-type]
+        client_factory=_factory(httpx.MockTransport(handler)),
     )
     assert dest.read_bytes() == BODY
 
@@ -84,7 +86,7 @@ def test_partial_file_is_resumed_with_a_range_request(tmp_path: Path) -> None:
         URL,
         dest,
         expected_sha256=BODY_SHA,
-        client_factory=_factory(httpx.MockTransport(handler)),  # type: ignore[arg-type]
+        client_factory=_factory(httpx.MockTransport(handler)),
     )
     assert seen == ["bytes=1000-"]
     assert dest.read_bytes() == BODY
@@ -101,7 +103,7 @@ def test_server_ignoring_range_restarts_the_part_file(tmp_path: Path) -> None:
         URL,
         dest,
         expected_sha256=BODY_SHA,
-        client_factory=_factory(httpx.MockTransport(handler)),  # type: ignore[arg-type]
+        client_factory=_factory(httpx.MockTransport(handler)),
     )
     assert dest.read_bytes() == BODY
 
@@ -117,7 +119,7 @@ def test_range_not_satisfiable_means_the_part_is_already_complete(tmp_path: Path
         URL,
         dest,
         expected_sha256=BODY_SHA,
-        client_factory=_factory(httpx.MockTransport(handler)),  # type: ignore[arg-type]
+        client_factory=_factory(httpx.MockTransport(handler)),
     )
     assert dest.read_bytes() == BODY
 
@@ -136,7 +138,7 @@ def test_transport_failures_retry_with_exponential_backoff(tmp_path: Path) -> No
         URL,
         tmp_path / "bearings.zip",
         expected_sha256=BODY_SHA,
-        client_factory=_factory(httpx.MockTransport(handler)),  # type: ignore[arg-type]
+        client_factory=_factory(httpx.MockTransport(handler)),
         sleep=slept.append,
     )
     assert attempts["n"] == 3
@@ -147,15 +149,29 @@ def test_exhausted_retries_raise_download_error(tmp_path: Path) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("always down", request=request)
 
-    with pytest.raises(download.DownloadError, match="after 3 attempts"):
+    with pytest.raises(download.DownloadError, match="after 3 attempts") as excinfo:
         download.download(
             URL,
             tmp_path / "bearings.zip",
             expected_sha256=BODY_SHA,
-            client_factory=_factory(httpx.MockTransport(handler)),  # type: ignore[arg-type]
+            client_factory=_factory(httpx.MockTransport(handler)),
             attempts=3,
             sleep=lambda _: None,
         )
+    assert isinstance(excinfo.value.__cause__, httpx.ConnectError)
+
+
+def test_download_without_an_expected_checksum_skips_verification(tmp_path: Path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b"unverified payload")
+
+    dest = tmp_path / "ai4i2020.zip"
+    result = download.download(
+        URL,
+        dest,
+        client_factory=_factory(httpx.MockTransport(handler)),
+    )
+    assert result.read_bytes() == b"unverified payload"
 
 
 def test_checksum_mismatch_deletes_the_file_and_raises(tmp_path: Path) -> None:
@@ -168,7 +184,7 @@ def test_checksum_mismatch_deletes_the_file_and_raises(tmp_path: Path) -> None:
             URL,
             dest,
             expected_sha256=BODY_SHA,
-            client_factory=_factory(httpx.MockTransport(handler)),  # type: ignore[arg-type]
+            client_factory=_factory(httpx.MockTransport(handler)),
         )
     assert not dest.exists()
     assert not dest.with_name(dest.name + ".part").exists()
@@ -189,7 +205,7 @@ def test_cache_hit_on_zip_skips_the_network(
 
     result = download.acquire_ims_archive(
         tmp_path / "raw",
-        client_factory=_factory(httpx.MockTransport(_never_called)),  # type: ignore[arg-type]
+        client_factory=_factory(httpx.MockTransport(_never_called)),
     )
     assert result == cached
     assert not (tmp_path / "raw").exists()
@@ -206,7 +222,7 @@ def test_cache_miss_falls_through_to_the_download(
 
     result = download.acquire_ims_archive(
         tmp_path / "raw",
-        client_factory=_factory(httpx.MockTransport(handler)),  # type: ignore[arg-type]
+        client_factory=_factory(httpx.MockTransport(handler)),
     )
     assert result.read_bytes() == BODY
 
@@ -240,7 +256,7 @@ def test_sha256_file_matches_hashlib(tmp_path: Path) -> None:
 def test_missing_unar_names_the_tool_and_the_install_commands(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setattr(archive.shutil, "which", lambda name: None)
+    monkeypatch.setattr(shutil, "which", lambda name: None)
     with pytest.raises(archive.MissingToolError) as excinfo:
         archive.extract_rar(tmp_path / "2nd_test.rar", tmp_path / "out")
     message = str(excinfo.value)
@@ -250,7 +266,7 @@ def test_missing_unar_names_the_tool_and_the_install_commands(
 
 
 def test_missing_7z_names_p7zip(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(archive.shutil, "which", lambda name: None)
+    monkeypatch.setattr(shutil, "which", lambda name: None)
     with pytest.raises(archive.MissingToolError, match="p7zip"):
         archive.extract_7z(tmp_path / "IMS.7z", tmp_path / "out")
 
@@ -299,8 +315,8 @@ def test_extraction_dispatches_zip_then_7z_then_unar(
     with zipfile.ZipFile(zip_path, "w") as zf:
         zf.writestr(archive.IMS_7Z_MEMBER, b"seven-zip-bytes")
     fake = _FakeRun(work)
-    monkeypatch.setattr(archive.subprocess, "run", fake)
-    monkeypatch.setattr(archive.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(subprocess, "run", fake)
+    monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
 
     test_dir = archive.extract_ims_test2(zip_path, work)
 
@@ -315,8 +331,8 @@ def test_extraction_dispatches_zip_then_7z_then_unar(
 def test_failing_tool_raises_extraction_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(archive.subprocess, "run", _FakeRun(tmp_path, returncode=2))
-    monkeypatch.setattr(archive.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(subprocess, "run", _FakeRun(tmp_path, returncode=2))
+    monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
     with pytest.raises(archive.ExtractionError, match="exited 2: nope"):
         archive.extract_rar(tmp_path / "2nd_test.rar", tmp_path / "out")
 
@@ -330,7 +346,7 @@ def test_missing_rar_after_7z_is_reported(tmp_path: Path, monkeypatch: pytest.Mo
     def silent_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
 
-    monkeypatch.setattr(archive.subprocess, "run", silent_run)
-    monkeypatch.setattr(archive.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(subprocess, "run", silent_run)
+    monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
     with pytest.raises(archive.ExtractionError, match=re.escape("2nd_test.rar was not extracted")):
         archive.extract_ims_test2(zip_path, work)

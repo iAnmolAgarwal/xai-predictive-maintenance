@@ -12,6 +12,7 @@ import pytest
 from pytest import MonkeyPatch
 
 from xpm.data import ai4i, loader
+from xpm.data.download import AI4I_URL
 from xpm.data.schema import (
     AI4I_CHANNELS,
     AI4I_DATASET_START,
@@ -136,10 +137,34 @@ def test_process_falls_back_to_the_uci_zip(
 
     manifest = ai4i.process()
 
-    assert manifest.source_url == ai4i.AI4I_URL
+    assert manifest.source_url == AI4I_URL
     assert manifest.rows == 200
     assert loader.load_manifest("ai4i")["parquet_sha256"] == manifest.parquet_sha256
     assert (tmp_path / "data" / "raw" / ai4i.RAW_PARQUET_NAME).is_file()
+
+
+def test_both_fetch_paths_failing_reports_each_error(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    def wrapper_down() -> pd.DataFrame:
+        raise RuntimeError("ucimlrepo offline")
+
+    def zip_down(url: str, dest: Path) -> Path:
+        raise ConnectionError("uci archive unreachable")
+
+    monkeypatch.setenv("XPM_DATA_CACHE", str(tmp_path / "empty-cache"))
+    monkeypatch.setenv(loader.DATA_ROOT_ENV_VAR, str(tmp_path / "data"))
+    monkeypatch.setattr(ai4i, "_fetch_via_ucimlrepo", wrapper_down)
+    monkeypatch.setattr(ai4i, "download", zip_down)
+
+    with pytest.raises(ai4i.FetchError) as excinfo:
+        ai4i.fetch_raw()
+
+    message = str(excinfo.value)
+    assert "RuntimeError('ucimlrepo offline')" in message
+    assert "ConnectionError('uci archive unreachable')" in message
+    assert isinstance(excinfo.value.__cause__, RuntimeError)
+    assert str(excinfo.value.__cause__) == "ucimlrepo offline"
 
 
 def test_process_refuses_a_truncated_source(
