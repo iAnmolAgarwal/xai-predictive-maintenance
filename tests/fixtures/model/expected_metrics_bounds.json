@@ -1,0 +1,30 @@
+{
+  "_about": "Bounds, not point values, for the metrics of both families trained on tiny_training_matrix.parquet. A bound fails when a change moves a metric out of a range that is plainly still the same model; point values would fail on any library patch release. Regenerate the fixture matrix with XPM_REGENERATE_GOLDENS=1 and widen these by hand if a deliberate modelling change moves them.",
+  "plant_id": "ai4i",
+  "split": {
+    "min_train_rows": 150,
+    "min_test_rows": 30,
+    "min_train_positives": 10,
+    "min_test_positives": 3
+  },
+  "models": {
+    "lgbm": {
+      "auroc": [0.85, 1.0],
+      "auprc": [0.7, 1.0],
+      "brier": [0.0, 0.1],
+      "ece": [0.0, 0.15],
+      "recall_at_target_precision": [0.5, 1.0]
+    },
+    "rf": {
+      "auroc": [0.85, 1.0],
+      "auprc": [0.65, 1.0],
+      "brier": [0.0, 0.15],
+      "ece": [0.0, 0.3],
+      "recall_at_target_precision": [0.5, 1.0]
+    }
+  },
+  "ablation": {
+    "min_groups": 3,
+    "auprc": [0.0, 1.0]
+  }
+}
