@@ -23,6 +23,8 @@ export default defineConfig({
       exclude: [
         'src/contracts/**',
         'src/mock/**',
+        // Bootstrap glue: a `createRoot` call and the mock gate, both exercised
+        // by the Playwright smoke rather than by a component test.
         'src/main.tsx',
         'src/vite-env.d.ts',
         'src/**/*.d.ts',
