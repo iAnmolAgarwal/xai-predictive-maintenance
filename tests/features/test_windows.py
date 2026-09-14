@@ -17,9 +17,11 @@ import pandas as pd
 import pytest
 
 from xpm.config import get_settings
+from xpm.contracts.common import PlantId
 from xpm.features.online import OnlineFeatureEngine
 from xpm.features.windows import (
     RollingWindowBuffer,
+    WindowSpec,
     row_interval_seconds,
     seconds_since_epoch,
     window_specs,
@@ -28,8 +30,8 @@ from xpm.features.windows import (
 START = datetime(2026, 1, 1, tzinfo=UTC)
 
 
-def _spec(plant: str, hours: int):  # type: ignore[no-untyped-def]
-    return next(spec for spec in window_specs(plant) if spec.hours == hours)  # type: ignore[arg-type]
+def _spec(plant: PlantId, hours: int) -> WindowSpec:
+    return next(spec for spec in window_specs(plant) if spec.hours == hours)
 
 
 def _buffer(channels: int = 1, hours: float = 24.0, expected: int = 288) -> RollingWindowBuffer:
