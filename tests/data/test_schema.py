@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from itertools import pairwise
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -132,7 +133,8 @@ def test_a_nan_in_a_channel_is_rejected() -> None:
 def test_non_monotonic_dataset_time_is_rejected() -> None:
     frame = _valid_ai4i_frame()
     frame = frame.sort_values(["machine_id", "dataset_ts"]).reset_index(drop=True)
-    frame.loc[0, "dataset_ts"] = frame.loc[2, "dataset_ts"] + pd.Timedelta(minutes=5)
+    third = cast(pd.Timestamp, frame.loc[2, "dataset_ts"])
+    frame.loc[0, "dataset_ts"] = third + pd.Timedelta(minutes=5)
     with pytest.raises(schema.SchemaError, match="not strictly increasing"):
         schema.validate(frame, schema.AI4I_SCHEMA)
 
