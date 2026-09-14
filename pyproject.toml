@@ -59,7 +59,20 @@ include = ["backend/xpm", "config", "scripts"]
 line-length = 100
 target-version = "py312"
 src = ["backend", "scripts", "tests"]
-extend-exclude = ["web", "docs", "data", "models", "reports", "nodered"]
+# Every entry is written "./name" on purpose. A ruff exclude pattern with no
+# path separator is matched against the *basename* of every directory, so a
+# bare "data" also silences backend/xpm/data/ and tests/data/ -- real Python
+# that must be linted. A pattern containing a separator is resolved relative to
+# this file, which anchors it to the repo root. (A leading "/" does not work:
+# ruff reads it as an absolute filesystem path and it never matches.)
+extend-exclude = [
+    "./web",
+    "./docs",
+    "./data",
+    "./models",
+    "./reports",
+    "./nodered",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "SIM", "RUF"]
