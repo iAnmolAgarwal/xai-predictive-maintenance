@@ -1,0 +1,53 @@
+{
+  "bearings": {
+    "1": {
+      "vibration_0k5khz": 1.0175130215939627e-06,
+      "vibration_1khz": 1.4195719443440305e-06,
+      "vibration_2khz": 5.384076905023967e-07,
+      "vibration_3khz": 5.974045561872544e-07,
+      "vibration_5khz": 7.906205111727715e-07,
+      "vibration_8khz": 1.1517002354285773e-07,
+      "vibration_crest": 6.120330670161392,
+      "vibration_kurtosis": 3.6287626426442556,
+      "vibration_rms": 0.07417899856512623
+    },
+    "2": {
+      "vibration_0k5khz": 1.8105064651331363e-06,
+      "vibration_1khz": 2.37399875231753e-06,
+      "vibration_2khz": 3.2617582474701923e-07,
+      "vibration_3khz": 8.963120054655884e-07,
+      "vibration_5khz": 9.750526173804747e-07,
+      "vibration_8khz": 3.1796654187647203e-07,
+      "vibration_crest": 5.640840930864178,
+      "vibration_kurtosis": 3.5068005370841773,
+      "vibration_rms": 0.09094388696428075
+    },
+    "3": {
+      "vibration_0k5khz": 2.0456778958602383e-06,
+      "vibration_1khz": 1.243964894744161e-06,
+      "vibration_2khz": 8.570783127543185e-07,
+      "vibration_3khz": 9.013515689218761e-07,
+      "vibration_5khz": 2.0235097888027582e-06,
+      "vibration_8khz": 7.021523524659968e-07,
+      "vibration_crest": 9.350651698298067,
+      "vibration_kurtosis": 6.213074668222574,
+      "vibration_rms": 0.10940413919878957
+    },
+    "4": {
+      "vibration_0k5khz": 1.0460469125913033e-06,
+      "vibration_1khz": 5.300823401859755e-07,
+      "vibration_2khz": 2.0168166658838913e-07,
+      "vibration_3khz": 5.26181334687937e-07,
+      "vibration_5khz": 3.5361979270436713e-07,
+      "vibration_8khz": 5.375335494430928e-08,
+      "vibration_crest": 4.879539326518411,
+      "vibration_kurtosis": 3.065959051148628,
+      "vibration_rms": 0.05410346803954669
+    }
+  },
+  "shape": [
+    20480,
+    4
+  ],
+  "source_file": "2004.02.12.10.32.39"
+}
