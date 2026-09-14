@@ -179,6 +179,10 @@ def _tick_stamps(
 
 def _as_datetime(value: object) -> datetime:
     """Normalise a pandas timestamp to a tz-aware :class:`datetime`."""
+    # pandas-stubs types `Timestamp.__new__` far more narrowly than the runtime
+    # accepts: the values arriving here are `numpy.datetime64` / `Timestamp`
+    # objects read back out of a parquet column, which `object` is the only
+    # honest static type for.
     return pd.Timestamp(value).to_pydatetime()  # type: ignore[arg-type]
 
 
