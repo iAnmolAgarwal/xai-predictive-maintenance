@@ -138,3 +138,16 @@ copies into docs/DECISIONS.md. (Review 2 item 3.)
 T-PERF's measurements go into its report and are transcribed by T-DOCS into
 README.md and docs/FINAL_REVIEW.md, never into docs/EVALUATION.md (which is
 T-MODEL's machine-generated file). (Review 2 item 16.)
+
+## R21 — Replay reconnect and client identifier (2026-09-14)
+- The replay publisher must survive broker blips itself: an exponential backoff
+  loop bounded by `mqtt.reconnect_min_seconds`/`reconnect_max_seconds`, living
+  in a coverage-measured module (`backend/xpm/replay/runner.py`), with
+  `__main__.py` reduced to a shim. Container restart policy is a backstop, not
+  the mechanism (the e2e overlay disables it).
+- The MQTT client identifier is `xpm-replay-{run_id}` using the run_id minted
+  at connect time (loop_index 0). Later loops/restarts keep the same connection
+  and therefore the same client id; the current run_id is always in the
+  retained ReplayState.
+- `play()` on an exhausted run is a real restart: new run_id, loop_index+1.
+- `loop_index` counts new runs (loops and restarts); document in ADR notes.
