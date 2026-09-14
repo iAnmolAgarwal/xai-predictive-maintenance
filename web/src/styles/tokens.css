@@ -1,0 +1,104 @@
+/* Design tokens — frontend.md §6.2. This file is the only source of colour,
+   type, spacing, elevation and motion in the app. Components reference the
+   custom properties; no component declares a raw hex value. */
+:root {
+  color-scheme: dark;
+
+  /* ── Ground & surfaces ───────────────────────────── */
+  --c-bg:            #0A0C10;   /* app ground */
+  --c-surface-1:     #12151C;   /* panels, tiles */
+  --c-surface-2:     #181C25;   /* raised: cards, menus, tooltips */
+  --c-surface-3:     #212734;   /* hover / pressed */
+  --c-border:        #262C39;   /* 1px hairlines */
+  --c-border-strong: #39424F;
+
+  /* ── Text ────────────────────────────────────────── */
+  --c-text:          #E6EAF2;   /* 14.8:1 on bg */
+  --c-text-muted:    #9BA6B8;   /*  7.1:1 on bg */
+  --c-text-faint:    #6B7688;   /*  4.6:1 on bg — never for body copy */
+
+  /* ── Semantic state (the only saturated colours) ──── */
+  --c-healthy:       #2DD4A7;   /* teal-green; 9.2:1 on --c-bg  */
+  --c-healthy-dim:   #14806A;
+  --c-healthy-glow:  rgb(45 212 167 / 0.22);
+
+  --c-watch:         #F5B944;   /* amber;      11.4:1 on --c-bg */
+  --c-watch-dim:     #8A6414;
+  --c-watch-glow:    rgb(245 185 68 / 0.24);
+
+  --c-danger:        #FF5C5C;   /* the one danger accent; 6.4:1 */
+  --c-danger-dim:    #8C2323;
+  --c-danger-glow:   rgb(255 92 92 / 0.28);
+
+  --c-offline:       #6B7688;   /* desaturated; offline is an ABSENCE of signal */
+  --c-offline-dim:   #3A414D;
+
+  /* ── Data / chart neutrals (channel series) ───────── */
+  /* IMS has 9 channels, so the ramp must have 9 distinguishable entries. */
+  --c-series-1: #7FB2FF;  --c-series-2: #B79CFF;  --c-series-3: #62D4E8;
+  --c-series-4: #E8A0C8;  --c-series-5: #9BD17C;  --c-series-6: #D9C27A;
+  --c-series-7: #8FD3B6;  --c-series-8: #C9A3E0;  --c-series-9: #A8B6CC;
+  --c-grid:      #1E2430;
+  --c-axis:      #4A5464;
+  --c-cursor:    #8FA0B8;
+
+  /* SHAP direction: direction:"up" = danger, "down" = healthy.
+     Direction is ALSO encoded by side-of-baseline and a ▲/▼ glyph. */
+  --c-shap-pos:  #FF5C5C;
+  --c-shap-neg:  #2DD4A7;
+
+  /* ── Type ────────────────────────────────────────── */
+  --font-sans: "Inter var", Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* 1.200 minor-third scale, 14px base */
+  --t-xs:   0.694rem;  /* 11.1px  labels, axis ticks   */
+  --t-sm:   0.833rem;  /* 13.3px  secondary, caveat    */
+  --t-base: 1rem;      /* 14px    html{font-size:14px}; body copy */
+  --t-md:   1.200rem;  /* 16.8px  card titles          */
+  --t-lg:   1.440rem;  /* 20.2px  section headings     */
+  --t-xl:   1.728rem;  /* 24.2px  view titles          */
+  --t-2xl:  2.074rem;  /* 29.0px  the explanation sentence */
+  --t-3xl:  2.488rem;  /* 34.8px  big numerics         */
+
+  --lh-tight: 1.15; --lh-snug: 1.35; --lh-normal: 1.55;
+  --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600;
+  --tracking-caps: 0.08em;   /* all-caps micro-labels only */
+
+  /* Numerics are always tabular so streaming digits don't jitter. */
+  --numeric: "tnum" 1, "zero" 1;
+
+  /* ── Spacing: 4px base, 1-2-3-4-6-8-12-16-24 ─────── */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
+
+  --radius-sm: 4px; --radius-md: 8px; --radius-lg: 12px; --radius-full: 999px;
+
+  --rail-w: 360px;
+  --topbar-h: 56px;
+
+  /* ── Elevation (no coloured shadows except state glow) ── */
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.40);
+  --shadow-2: 0 4px 12px rgb(0 0 0 / 0.45);
+  --shadow-3: 0 12px 32px rgb(0 0 0 / 0.55);
+
+  /* ── Motion ──────────────────────────────────────── */
+  --dur-instant: 80ms;   /* hover, focus ring            */
+  --dur-fast:    140ms;  /* button press, tooltip        */
+  --dur-base:    220ms;  /* slide-in, panel change       */
+  --dur-slow:    380ms;  /* state-change glow, ring fill */
+  --dur-narrative: 900ms;/* SHAP waterfall build-in ONLY */
+
+  --ease-out:   cubic-bezier(0.16, 1, 0.30, 1);   /* entrances */
+  --ease-in-out:cubic-bezier(0.65, 0, 0.35, 1);   /* moves     */
+  --ease-spring-stiff: 400; --ease-spring-damp: 32; /* Framer springs */
+
+  --focus-ring: 0 0 0 2px var(--c-bg), 0 0 0 4px #7FB2FF;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instant: 0ms; --dur-fast: 0ms; --dur-base: 0ms;
+    --dur-slow: 0ms; --dur-narrative: 0ms;
+  }
+}
