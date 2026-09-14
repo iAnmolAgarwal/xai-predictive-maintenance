@@ -26,7 +26,11 @@ export type AlertsSlice = {
   resetAlerts: () => void;
 };
 
-const emptyFilters = (): AlertFilters => ({ machineIds: [], severities: [], feature: null });
+const emptyFilters = (): AlertFilters => ({
+  machineIds: [],
+  severities: [],
+  feature: null,
+});
 
 export const createAlertsSlice: SliceCreator<AlertsSlice> = (set) => ({
   alerts: {

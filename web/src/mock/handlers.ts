@@ -33,7 +33,9 @@ const plantIdFrom = (value: string | null): PlantId => (value === 'ims' ? 'ims' 
 
 export const restHandlers = [
   http.get('/api/health', ({ request }) =>
-    HttpResponse.json(makeHealth(plantIdFrom(new URL(request.url).searchParams.get('plant_id')), 0)),
+    HttpResponse.json(
+      makeHealth(plantIdFrom(new URL(request.url).searchParams.get('plant_id')), 0),
+    ),
   ),
   http.get('/api/config', () => HttpResponse.json(makeConfig())),
   http.get('/api/plants', () => HttpResponse.json(PLANTS)),
@@ -95,7 +97,13 @@ export const wsHandler = socketLink.addEventListener('connection', ({ client }) 
   const send = (frame: ServerFrame): void => client.send(JSON.stringify(frame));
 
   // hello, then snapshot, on every connect — no resume, ever (R10).
-  send({ type: 'hello', protocol_version: 1, run_id: RUN_ID, server_time: new Date().toISOString(), plant });
+  send({
+    type: 'hello',
+    protocol_version: 1,
+    run_id: RUN_ID,
+    server_time: new Date().toISOString(),
+    plant,
+  });
   send({
     type: 'snapshot',
     plant_id: plantId,

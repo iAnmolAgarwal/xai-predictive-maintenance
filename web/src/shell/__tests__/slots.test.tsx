@@ -73,7 +73,9 @@ describe('slot registry', () => {
       },
     ]);
     render(<Slot name="floor.grid" />);
-    expect(screen.getByTestId('floor-placeholder-tile-ai4i-01')).toHaveTextContent('Mill 01');
+    expect(screen.getByTestId('floor-placeholder-tile-ai4i-01')).toHaveTextContent(
+      'Mill 01',
+    );
   });
 
   it('says so plainly when the plant reports no machines', () => {

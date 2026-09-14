@@ -60,8 +60,7 @@ const LIVENESS_TICK_MS = 1000;
 
 export function wsUrl(plantId: PlantId, origin?: string): string {
   const base =
-    origin ??
-    (typeof window === 'undefined' ? 'http://localhost' : window.location.origin);
+    origin ?? (typeof window === 'undefined' ? 'http://localhost' : window.location.origin);
   const url = new URL('/ws', base);
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   url.searchParams.set('plant_id', plantId);

@@ -27,9 +27,7 @@ describe('App', () => {
     expect(screen.getByTestId('top-bar')).toBeInTheDocument();
     expect(screen.getByTestId('right-rail')).toBeInTheDocument();
 
-    await waitFor(() =>
-      expect(useStore.getState().plants.order).toEqual(['ai4i', 'ims']),
-    );
+    await waitFor(() => expect(useStore.getState().plants.order).toEqual(['ai4i', 'ims']));
     expect(useStore.getState().config?.values['api.ws_ping_seconds']).toBe(10);
   });
 

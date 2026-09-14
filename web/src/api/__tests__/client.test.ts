@@ -29,7 +29,9 @@ describe('buildQuery', () => {
         channels: ['torque', 'tool_wear', null],
         live: true,
       }),
-    ).toBe('?machine_id=ai4i-03&max_points=2000&channels=torque&channels=tool_wear&live=true');
+    ).toBe(
+      '?machine_id=ai4i-03&max_points=2000&channels=torque&channels=tool_wear&live=true',
+    );
   });
 
   it('is empty for no params', () => {
@@ -91,9 +93,7 @@ describe('typed endpoints', () => {
   });
 
   it('raises ApiError for a non-problem error body', async () => {
-    mockServer.use(
-      http.get('/api/boom', () => new HttpResponse('nope', { status: 503 })),
-    );
+    mockServer.use(http.get('/api/boom', () => new HttpResponse('nope', { status: 503 })));
     await expect(apiGet('/api/boom')).rejects.toMatchObject({
       status: 503,
       problem: null,

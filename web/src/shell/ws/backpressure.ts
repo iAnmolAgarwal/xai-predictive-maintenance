@@ -105,8 +105,10 @@ export type CommitLoopDeps = {
  */
 export function createCommitLoop(deps: CommitLoopDeps): CommitLoop {
   const requestFrame =
-    deps.requestFrame ?? ((callback: FrameRequestCallback) => requestAnimationFrame(callback));
-  const cancelFrame = deps.cancelFrame ?? ((handle: number) => cancelAnimationFrame(handle));
+    deps.requestFrame ??
+    ((callback: FrameRequestCallback) => requestAnimationFrame(callback));
+  const cancelFrame =
+    deps.cancelFrame ?? ((handle: number) => cancelAnimationFrame(handle));
   const visibility =
     deps.visibility ?? (typeof document === 'undefined' ? undefined : document);
   let handle: number | null = null;

@@ -29,7 +29,9 @@ export class ErrorBoundary extends Component<Props, State> {
         title="This view stopped responding"
         detail={error.message}
         action={
-          <Button onClick={() => this.setState({ error: null })}>Try rendering again</Button>
+          <Button onClick={() => this.setState({ error: null })}>
+            Try rendering again
+          </Button>
         }
       />
     );

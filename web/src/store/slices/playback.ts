@@ -60,14 +60,13 @@ export const createPlaybackSlice: SliceCreator<PlaybackSlice> = (set) => ({
     })),
   setPlayingOptimistic: (playing) =>
     set((state) => ({ playback: { ...state.playback, playing } })),
-  setSpeedOptimistic: (speed) => set((state) => ({ playback: { ...state.playback, speed } })),
+  setSpeedOptimistic: (speed) =>
+    set((state) => ({ playback: { ...state.playback, speed } })),
   setDatasetTsMs: (datasetTsMs) =>
     set((state) =>
       // The dataset clock only ever moves forward from a risk update while the
       // user is not scrubbing.
-      state.playback.scrubbing
-        ? {}
-        : { playback: { ...state.playback, datasetTsMs } },
+      state.playback.scrubbing ? {} : { playback: { ...state.playback, datasetTsMs } },
     ),
   setScrubbing: (scrubbing, datasetTsMs) =>
     set((state) => ({

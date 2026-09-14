@@ -8,17 +8,16 @@ expect.extend(axeMatchers);
 // jsdom implements neither matchMedia nor ResizeObserver, and the shell reads
 // both (reduced motion, rail breakpoint, chart sizing).
 if (!window.matchMedia) {
-  window.matchMedia = (query: string): MediaQueryList =>
-    ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      addListener: () => {},
-      removeListener: () => {},
-      dispatchEvent: () => false,
-    });
+  window.matchMedia = (query: string): MediaQueryList => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  });
 }
 
 if (!globalThis.ResizeObserver) {
@@ -28,7 +27,6 @@ if (!globalThis.ResizeObserver) {
     disconnect(): void {}
   };
 }
-
 
 // jsdom supplies `AbortController`, but `fetch` is Node's, and Node rejects a
 // signal that did not come from its own realm ("Expected signal to be an

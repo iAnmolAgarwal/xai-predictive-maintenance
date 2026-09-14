@@ -7,7 +7,7 @@ import { resetStore, useStore } from '@/store';
 import { clearRings } from '@/store/ringBuffer';
 import { useWsConnection } from '../../ws/useWsConnection';
 import type { SocketLike } from '../../ws/client';
-import type { FakeSocket} from '../../ws/__tests__/fakeSocket';
+import type { FakeSocket } from '../../ws/__tests__/fakeSocket';
 import { socketFactory } from '../../ws/__tests__/fakeSocket';
 import { clearSlots, registerSlot } from '../../slots';
 import { seedStore, stubViewport } from '../../__tests__/testUtils';

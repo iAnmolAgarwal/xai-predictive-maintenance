@@ -39,7 +39,9 @@ export function AppLayout() {
 
   return (
     <div
-      className={[styles.shell, overlay ? styles.shellNarrow : ''].filter(Boolean).join(' ')}
+      className={[styles.shell, overlay ? styles.shellNarrow : '']
+        .filter(Boolean)
+        .join(' ')}
       data-testid="app-shell"
       data-rail={overlay ? 'overlay' : 'docked'}
     >

@@ -183,13 +183,23 @@ describe('Sparkline', () => {
 
 describe('HealthRing', () => {
   it('renders the percentage when scored', () => {
-    render(<HealthRing probability={0.74} label="risk 74%" data-testid="tile-ring-ai4i-03" />);
+    render(
+      <HealthRing probability={0.74} label="risk 74%" data-testid="tile-ring-ai4i-03" />,
+    );
     expect(screen.getByTestId('tile-ring-ai4i-03')).toHaveTextContent('74%');
-    expect(screen.getByTestId('tile-ring-ai4i-03').querySelectorAll('circle')).toHaveLength(2);
+    expect(screen.getByTestId('tile-ring-ai4i-03').querySelectorAll('circle')).toHaveLength(
+      2,
+    );
   });
 
   it('renders the designed not-yet-scored state for a null probability', () => {
-    render(<HealthRing probability={null} label="not yet scored" data-testid="tile-ring-ims-04" />);
+    render(
+      <HealthRing
+        probability={null}
+        label="not yet scored"
+        data-testid="tile-ring-ims-04"
+      />,
+    );
     const ring = screen.getByTestId('tile-ring-ims-04');
     expect(ring).toHaveTextContent('—');
     // Empty track, no filled arc — never a zero-length arc labelled 0%.

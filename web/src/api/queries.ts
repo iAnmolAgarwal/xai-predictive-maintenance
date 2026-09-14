@@ -100,10 +100,10 @@ export const getImportance = (
   params?: { since?: string; until?: string; limit?: number },
   options?: RequestOptions,
 ): Promise<GlobalImportance> =>
-  apiGet<GlobalImportance>(
-    `/api/machines/${encodeURIComponent(machineId)}/importance`,
-    { ...options, params: params ?? {} },
-  );
+  apiGet<GlobalImportance>(`/api/machines/${encodeURIComponent(machineId)}/importance`, {
+    ...options,
+    params: params ?? {},
+  });
 
 export const getStateAt = (
   plantId: PlantId,
@@ -135,8 +135,7 @@ export const getReplay = (options?: RequestOptions): Promise<ReplayState> =>
 export const postReplayCommand = (
   command: ReplayCommand,
   options?: RequestOptions,
-): Promise<ReplayState> =>
-  apiPost<ReplayState>('/api/replay/command', command, options);
+): Promise<ReplayState> => apiPost<ReplayState>('/api/replay/command', command, options);
 
 export const getModels = (options?: RequestOptions): Promise<ModelInfo[]> =>
   apiGet<ModelInfo[]>('/api/models', options);

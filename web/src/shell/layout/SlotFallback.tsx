@@ -63,9 +63,7 @@ export function SlotFallback({ name }: { name: SlotName }) {
     );
   }
   const copy = COPY[name];
-  return (
-    <EmptyState area={area} glyph={copy.glyph} title={copy.title} body={copy.body} />
-  );
+  return <EmptyState area={area} glyph={copy.glyph} title={copy.title} body={copy.body} />;
 }
 
 /**

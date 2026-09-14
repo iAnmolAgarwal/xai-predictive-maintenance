@@ -73,7 +73,8 @@ async function toApiError(response: Response): Promise<ApiError> {
   } catch {
     // A non-JSON error body is still an error; the status carries the meaning.
   }
-  const message = problem?.detail ?? problem?.title ?? `${response.status} ${response.statusText}`;
+  const message =
+    problem?.detail ?? problem?.title ?? `${response.status} ${response.statusText}`;
   return new ApiError(response.status, message, problem);
 }
 

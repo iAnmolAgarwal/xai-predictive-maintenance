@@ -102,7 +102,11 @@ function MachineDetailView() {
   }
 
   return (
-    <section className={styles.detail} data-testid="machine-detail" aria-label="Machine detail">
+    <section
+      className={styles.detail}
+      data-testid="machine-detail"
+      aria-label="Machine detail"
+    >
       <header className={[styles.viewHeader, styles.detailHeader].join(' ')}>
         <Button variant="ghost" onClick={() => void navigate('/')}>
           ← Plant floor

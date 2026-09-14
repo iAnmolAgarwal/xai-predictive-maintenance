@@ -14,7 +14,7 @@ import {
 import { resetStore, useStore } from '@/store';
 import { clearRings, getRiskRing, getTelemetryRing, readLast } from '@/store/ringBuffer';
 import { createWsClient, wsUrl, type WsClient } from '../client';
-import type { FakeSocket} from './fakeSocket';
+import type { FakeSocket } from './fakeSocket';
 import { socketFactory } from './fakeSocket';
 
 const ORIGIN = 'http://xpm.test';
@@ -145,7 +145,10 @@ describe('ws client', () => {
 
     const ring = getTelemetryRing('ai4i-01');
     expect(ring?.series).toHaveLength(permuted.channels.length);
-    const seeded = readLast(ring ?? { series: [], datasetTsMs: new Float64Array(), cap: 0, count: 0, write: 0 }, 1);
+    const seeded = readLast(
+      ring ?? { series: [], datasetTsMs: new Float64Array(), cap: 0, count: 0, write: 0 },
+      1,
+    );
     const expected = machines[0]?.values ?? [];
     expected.forEach((value, index) => {
       expect(seeded.series[index]?.[0]).toBe(value);
@@ -229,9 +232,9 @@ describe('ws client', () => {
       useStore.getState().explanations.byAlertId['alt_00000000000000ff'],
     ).toBeDefined();
     // The frames are stored as the REST models they spread, with no `type` left on.
-    expect(
-      'type' in (useStore.getState().alerts.byId['alt_00000000000000ff'] ?? {}),
-    ).toBe(false);
+    expect('type' in (useStore.getState().alerts.byId['alt_00000000000000ff'] ?? {})).toBe(
+      false,
+    );
   });
 
   it('replies to a server ping with exactly one pong, even while paused', () => {
@@ -282,9 +285,11 @@ describe('ws client', () => {
     const plant = makePlant('ai4i');
     const first = connectAndSeed(plant);
     runFrame();
-    useStore.getState().addAlerts([
-      { ...makeAlert('ai4i', 'ai4i-07', 3), alert_id: 'alt_0000000000000fff' },
-    ]);
+    useStore
+      .getState()
+      .addAlerts([
+        { ...makeAlert('ai4i', 'ai4i-07', 3), alert_id: 'alt_0000000000000fff' },
+      ]);
     expect(useStore.getState().alerts.order).toHaveLength(2);
 
     first.drop();

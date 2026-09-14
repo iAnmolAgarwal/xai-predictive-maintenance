@@ -253,7 +253,9 @@ describe('explanations slice', () => {
     useStore.getState().setExplanationError(alert.alert_id, 'boom');
 
     const state = useStore.getState().explanations;
-    expect(state.byAlertId[alert.alert_id]?.explanation_id).toBe(explanation.explanation_id);
+    expect(state.byAlertId[alert.alert_id]?.explanation_id).toBe(
+      explanation.explanation_id,
+    );
     expect(state.compareByAlertId[alert.alert_id]?.commentary).toBe(
       'rf weights tool wear more.',
     );

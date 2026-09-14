@@ -6,9 +6,7 @@ describe('reconnect backoff', () => {
   it('grows by the configured factor from the configured base', () => {
     expect(backoffCeilingMs(0)).toBe(RECONNECT.baseMs);
     expect(backoffCeilingMs(1)).toBe(Math.round(RECONNECT.baseMs * RECONNECT.factor));
-    expect(backoffCeilingMs(2)).toBe(
-      Math.round(RECONNECT.baseMs * RECONNECT.factor ** 2),
-    );
+    expect(backoffCeilingMs(2)).toBe(Math.round(RECONNECT.baseMs * RECONNECT.factor ** 2));
   });
 
   it('caps at 15 s no matter how many attempts have failed', () => {
