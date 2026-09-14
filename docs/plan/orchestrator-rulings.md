@@ -151,3 +151,15 @@ T-MODEL's machine-generated file). (Review 2 item 16.)
   retained ReplayState.
 - `play()` on an exhausted run is a real restart: new run_id, loop_index+1.
 - `loop_index` counts new runs (loops and restarts); document in ADR notes.
+
+## R22 — Percentile backend is exact ranks, not tdigest (2026-09-14)
+- T-FEATURES measured `TDigest.cdf` at ~773 µs per call; ranking 154 features
+  per row would give ~38 rows/s against the 5 000 rows/s floor. Exact
+  empirical ranks over a per-run feature-major history (≤ ~1 000 rows per run,
+  ~1 MB per machine, reset on each new run_id) are accepted as the backend.
+- Settings: `features.percentile_algorithm` accepts `"tdigest" | "exact"` and
+  both select the exact backend for now; the default flips to `"exact"` and
+  `tdigest` is dropped from pyproject in a follow-up `fix/features-settings`
+  branch after T-FEATURES merges (T-CONTRACTS/pyproject ownership).
+- `EWMA_WINDOW_DIVISOR = 4` stays a module constant; not a settings leaf.
+- Docs (T-DOCS, ADR) must record why tdigest was abandoned, with the numbers.
