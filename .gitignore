@@ -23,19 +23,28 @@ web/test-results/
 *.tsbuildinfo
 .eslintcache
 
-# --- Data & models (never commit) ---
-data/raw/
-data/processed/
+# --- Data & models (R2: raw out, processed in) ---
+# Raw archives are never committed (the IMS archive alone is 1.0 GB).
+data/raw/**
 data/*.csv
-data/*.parquet
 data/*.zip
 data/*.rar
 data/*.7z
+data/*.db
+data/*.db-*
+# Processed build outputs ARE committed so a fresh clone streams both plants
+# with zero downloads. They must stay under 5 MB in total.
+!data/processed/**/*.parquet
+!data/processed/**/*.json
+# Model artefacts are reproducible from the committed processed data + seed.
+models/registry/**
 *.pkl
 *.joblib
 *.onnx
 *.h5
-!models/registry/**/*.json
+# Generated evaluation reports, except the directory marker.
+reports/**
+!reports/.gitkeep
 
 # --- Env / secrets ---
 .env
@@ -44,7 +53,6 @@ data/*.7z
 
 # --- Docker / runtime ---
 volumes/
-*.db
 *.db-journal
 mosquitto/data/
 mosquitto/log/
