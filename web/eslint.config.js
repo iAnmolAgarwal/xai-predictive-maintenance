@@ -20,7 +20,7 @@ export default tseslint.config(
       'coverage/**',
       'playwright-report/**',
       'test-results/**',
-      'public/mockServiceWorker.js',
+      'mock-public/mockServiceWorker.js',
       'src/contracts/api.ts',
       'src/contracts/ws.ts',
     ],

@@ -7,8 +7,15 @@ import { defineConfig } from 'vite';
 // story, no ws:// mixed-content story, identical URL shapes in both modes.
 const apiTarget = process.env.VITE_API_TARGET ?? 'http://127.0.0.1:8000';
 
+// The MSW service worker lives in mock-public/ and is copied into the bundle
+// only by `dev:mock` / `build:mock`. The default build has no static assets to
+// copy at all -- fonts, styles and the worker are either bundled or mock-only --
+// so `publicDir` is disabled and dist/ cannot contain a registerable worker.
+const useMocks = process.env.VITE_USE_MOCKS === 'true';
+
 export default defineConfig({
   plugins: [react()],
+  publicDir: useMocks ? 'mock-public' : false,
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
