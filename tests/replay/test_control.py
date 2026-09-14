@@ -320,18 +320,25 @@ async def test_listen_consumes_a_stream_of_payloads(harness: Harness) -> None:
 
 
 async def test_listen_stops_when_the_publisher_stops(harness: Harness) -> None:
-    seen: list[str] = []
+    """The listener must not consume a command after the run has stopped."""
+    commands = [
+        ReplayCommand(command="pause", request_id="req_0001").model_dump_json().encode(),
+        ReplayCommand(command="set_speed", speed=20.0, request_id="req_0002")
+        .model_dump_json()
+        .encode(),
+    ]
+    consumed: list[int] = []
 
     async def payloads() -> AsyncIterator[bytes]:
-        seen.append("first")
-        yield ReplayCommand(command="pause", request_id="req_0001").model_dump_json().encode()
-        harness.publisher.stop()
-        seen.append("second")
-        yield ReplayCommand(command="play", request_id="req_0002").model_dump_json().encode()
-        seen.append("third")  # pragma: no cover - the listener must not get here
+        for index, command in enumerate(commands):
+            consumed.append(index)
+            yield command
 
+    harness.publisher.stop()  # e.g. SIGTERM arrived while commands were queued
     await harness.control.listen(payloads())
-    assert seen == ["first", "second"]
+    assert consumed == [0]
+    assert harness.publisher.playing is False
+    assert harness.publisher.speed == 1.0  # the second command was never read
 
 
 def test_control_exposes_its_publisher(harness: Harness) -> None:

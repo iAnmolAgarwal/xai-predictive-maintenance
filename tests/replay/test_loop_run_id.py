@@ -133,6 +133,9 @@ async def test_loop_false_stops_with_one_run_id_and_a_final_paused_state() -> No
     assert states[-1]["playing"] is False
     assert states[-1]["rows_published"] == LOOP_TICKS * LOOP_MACHINES
     assert states[-1]["rows_published"] == states[-1]["rows_total"]
+    # The cursor is clamped: a retained state never leaves the dataset window.
+    assert states[-1]["dataset_ts"] == states[-1]["dataset_end"]
+    assert states[-1]["dataset_ts"] <= states[-1]["dataset_end"]
     assert publisher.loop_index == 0
     assert publisher.stopped is True
 
@@ -144,14 +147,31 @@ async def test_loop_false_publishes_every_row_exactly_once() -> None:
     assert len(seen) == len(client.telemetry) == LOOP_TICKS * LOOP_MACHINES
 
 
-async def test_playing_a_finished_run_rewinds_it() -> None:
-    """The dashboard's play button must not be a no-op on a finished run."""
-    publisher, _client, _ = make_publisher(loop_settings(loop=False))
+async def test_playing_a_finished_run_restarts_it_under_a_new_run_id() -> None:
+    """The dashboard's play button on a finished run is a restart (R12, R21).
+
+    A second pass under the old ``run_id`` would collide every derived
+    ``alert_id``, so ``play()`` mints a new one and increments ``loop_index``.
+    """
+    publisher, client, _ = make_publisher(loop_settings(loop=False))
     await asyncio.wait_for(publisher.run(), timeout=5.0)
+    finished_run_id = publisher.run_id
+    published_before = len(client.telemetry)
+
     await publisher.play()
+    assert publisher.run_id != finished_run_id
+    assert publisher.loop_index == 1
     assert publisher.clock.tick == 0
     assert publisher.rows_published == 0
     assert publisher.playing is True
+    assert publisher.stopped is False
+
+    # And it really publishes again, under the new run id.
+    await asyncio.wait_for(publisher.run(), timeout=5.0)
+    fresh = client.telemetry[published_before:]
+    assert fresh, "a restarted run must emit telemetry"
+    assert {message.json["run_id"] for message in fresh} == {publisher.run_id}
+    assert min(message.json["seq"] for message in fresh) == 0
 
 
 # -- autostart -------------------------------------------------------------- #

@@ -90,14 +90,21 @@ class FakeMqttClient:
 
 @dataclass(slots=True)
 class VirtualTimeSource:
-    """A monotonic clock that advances only when someone sleeps on it."""
+    """A monotonic clock that advances only when someone sleeps on it.
+
+    Every requested duration is recorded in :attr:`sleeps`, which is how the
+    runner tests read the reconnect backoff off a run that is also sleeping out
+    its ordinary tick pacing.
+    """
 
     now: float = 0.0
+    sleeps: list[float] = field(default_factory=list)
 
     def monotonic(self) -> float:
         return self.now
 
     async def sleep(self, seconds: float) -> None:
+        self.sleeps.append(seconds)
         self.now += max(seconds, 0.0)
         # Still yield, so other tasks on the loop make progress exactly as they
         # would against the real event loop.

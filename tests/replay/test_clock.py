@@ -61,6 +61,33 @@ def test_speed_changes_wall_clock_pacing_only(speed: float) -> None:
     assert clock.dataset_ts == AI4I_START + ticks * ROW_INTERVAL
 
 
+@pytest.mark.parametrize("speed", SPEEDS)
+def test_a_slow_publish_is_absorbed_rather_than_compounded(speed: float) -> None:
+    """The anti-drift property ``advance()`` exists for.
+
+    The deadline moves by exactly one interval instead of being rebased on
+    *now*, so a tick that took longer than its slot is paid for out of the next
+    slot and the schedule stays on its original grid. Without this, 20x would
+    drift further behind wall time with every slow tick.
+    """
+    clock, time = make_clock(speed=speed)
+    ticks = 10
+    overrun = clock.seconds_per_tick * 0.4
+    for _ in range(ticks):
+        time.now += clock.wait_seconds()
+        time.now += overrun  # a publish that overran its slot
+        clock.advance()
+    # Ten ticks still span nine intervals: every overrun was paid for out of
+    # the following slot instead of being added to the schedule. A clock that
+    # rebased its deadline on *now* would have cost 9 intervals PLUS ten
+    # overruns and drifted further behind wall time with every tick.
+    spt = clock.seconds_per_tick
+    assert time.now == pytest.approx((ticks - 1) * spt + overrun)
+    assert time.now < (ticks - 1) * spt + ticks * overrun
+    assert clock.wait_seconds() == pytest.approx(spt - overrun)
+    assert clock.dataset_ts == AI4I_START + ticks * ROW_INTERVAL
+
+
 def test_seconds_per_tick_is_the_inverse_of_rate_times_speed() -> None:
     clock, _ = make_clock(speed=5.0)
     assert clock.seconds_per_tick == pytest.approx(1.0 / (BASE_RATE_HZ * 5.0))

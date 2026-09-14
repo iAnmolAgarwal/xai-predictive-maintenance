@@ -203,26 +203,40 @@ async def test_the_default_schedule_factory_reads_the_committed_parquet() -> Non
     )
 
 
-async def test_a_wide_tick_yields_to_the_event_loop_every_publish_batch() -> None:
-    """``replay.publish_batch`` bounds how long a tick can hog the loop."""
+@pytest.mark.parametrize(("batch", "expected_yields"), [(1, 3), (2, 1), (4, 0), (12, 0)])
+async def test_publish_batch_bounds_how_long_a_tick_holds_the_event_loop(
+    batch: int, expected_yields: int
+) -> None:
+    """``replay.publish_batch`` chunks a wide tick; order is never disturbed.
+
+    With the shipped defaults (batch 12, 12 AI4I machines) a tick is exactly one
+    chunk and no yield happens at all, which is why the parametrisation covers
+    ``publish_batch < machine_count`` explicitly.
+    """
+    machines = 4
     base = get_settings()
     settings = base.model_copy(
-        update={"replay": base.replay.model_copy(update={"loop": False, "publish_batch": 1})}
+        update={"replay": base.replay.model_copy(update={"loop": False, "publish_batch": batch})}
     )
-    schedule = small_schedule(settings, ticks=2, machines=4, seed=GOLDEN_SEED)
+    schedule = small_schedule(settings, ticks=2, machines=machines, seed=GOLDEN_SEED)
     client = FakeMqttClient()
+    time = VirtualTimeSource()
     publisher = ReplayPublisher(
         client,
         settings=settings,
         plant_id="ai4i",
         schedule_factory=lambda _plant, _seed: schedule,
-        time_source=VirtualTimeSource(),
+        time_source=time,
     )
     await asyncio.wait_for(publisher.run(), timeout=5.0)
-    # Order is preserved across the yields: the schedule order is the wire order.
+
+    # A chunk boundary is a zero-second sleep; tick pacing is never zero.
+    yields_per_tick = sum(1 for seconds in time.sleeps if seconds == 0.0) // 2
+    assert yields_per_tick == expected_yields
+    # Order is preserved across the yields: schedule order is wire order.
     published = [message.json["machine_id"] for message in client.telemetry]
-    expected = [row.machine_id for tick in schedule.ticks for row in tick]
-    assert published == expected
+    assert published == [row.machine_id for tick in schedule.ticks for row in tick]
+    assert len(published) == 2 * machines
 
 
 def test_the_control_topics_match_the_topic_table() -> None:
