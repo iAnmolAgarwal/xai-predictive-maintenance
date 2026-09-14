@@ -1,0 +1,162 @@
+name: xpm
+
+# One-command stack for "Why Did the Model Flag This Machine?".
+#   make dev          -> docker compose up --build   (builds locally, R1)
+#   make dev PULL=1   -> pulls the GHCR images CI publishes from main
+#
+# Every setting a user might want to change lives in config/settings.yaml and
+# can be overridden here with XPM_<SECTION>__<KEY> (backend.md §3.6).
+#
+# XPM_IMAGE_PREFIX / XPM_IMAGE_TAG select which GHCR images `PULL=1` fetches;
+# they are irrelevant to the default build-locally path.
+
+x-xpm-runtime: &xpm-runtime
+  restart: unless-stopped
+  environment: &xpm-env
+    XPM_MQTT__HOST: mosquitto
+    XPM_MQTT__PORT: "1883"
+    XPM_PATHS__DATA_DIR: /app/data
+    XPM_PATHS__MODELS_DIR: /app/models/registry
+    XPM_LOGGING__JSON: "true"
+  # config/, data/ and models/ are read-only projections of the repo, so a
+  # settings or dataset change needs no rebuild and no container can corrupt
+  # the working tree. All writes go to the named volume below.
+  volumes:
+    - ./config:/app/config:ro
+    - ./data:/app/data:ro
+    - ./models:/app/models:ro
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0.22
+    container_name: xpm-mosquitto
+    restart: unless-stopped
+    # Loopback-only publication: reachable from the compose network and from a
+    # developer running the backend outside compose, from nowhere else.
+    ports:
+      - "127.0.0.1:1883:1883"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+    healthcheck:
+      # mosquitto_sub ships in the image; a successful -E subscribe proves the
+      # broker accepted a connection on the MQTT listener.
+      test: ["CMD", "mosquitto_sub", "-h", "127.0.0.1", "-p", "1883", "-t", "$$SYS/#", "-C", "1", "-W", "3"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  api:
+    <<: *xpm-runtime
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    image: ${XPM_IMAGE_PREFIX:-ghcr.io/anmolagarwal}/xpm-api:${XPM_IMAGE_TAG:-latest}
+    container_name: xpm-api
+    environment:
+      <<: *xpm-env
+      XPM_API__HOST: 0.0.0.0
+      XPM_API__PORT: "8000"
+      XPM_PATHS__DB_PATH: /app/var/xpm.db
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data:ro
+      - ./models:/app/models:ro
+      - api-state:/app/var
+    ports:
+      - "8000:8000"
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys, urllib.request
+          with urllib.request.urlopen("http://127.0.0.1:8000/api/health", timeout=4) as r:
+              sys.exit(0 if r.status == 200 else 1)
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  replay:
+    <<: *xpm-runtime
+    build:
+      context: .
+      dockerfile: docker/replay.Dockerfile
+    image: ${XPM_IMAGE_PREFIX:-ghcr.io/anmolagarwal}/xpm-replay:${XPM_IMAGE_TAG:-latest}
+    container_name: xpm-replay
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    healthcheck:
+      # The publisher exposes no port; liveness is "its interpreter runs and
+      # the broker it publishes to is reachable from this container".
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import socket
+          socket.create_connection(("mosquitto", 1883), timeout=4).close()
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    image: ${XPM_IMAGE_PREFIX:-ghcr.io/anmolagarwal}/xpm-web:${XPM_IMAGE_TAG:-latest}
+    container_name: xpm-web
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  nodered:
+    build:
+      context: .
+      dockerfile: docker/nodered.Dockerfile
+    image: ${XPM_IMAGE_PREFIX:-ghcr.io/anmolagarwal}/xpm-nodered:${XPM_IMAGE_TAG:-latest}
+    container_name: xpm-nodered
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+    volumes:
+      - nodered-data:/data
+      # Read-only source of the committed flow; seeded into /data on first
+      # start by the image entrypoint, never written back.
+      - ./nodered:/flows:ro
+    ports:
+      - "1880:1880"
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:1880/',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  mosquitto-data:
+  api-state:
+  nodered-data:

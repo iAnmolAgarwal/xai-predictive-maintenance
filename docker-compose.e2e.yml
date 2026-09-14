@@ -1,0 +1,14 @@
+# Overlay used by `make e2e` and by CI's compose smoke test.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d
+#
+# The only difference from the demo stack is that the replay runs exactly once
+# (R12): looping would mint a new run_id mid-suite and make alert ids, which
+# are a function of run_id, non-deterministic across a test run.
+
+services:
+  replay:
+    environment:
+      XPM_REPLAY__LOOP: "false"
+      XPM_REPLAY__AUTOSTART: "true"
+    restart: "no"
