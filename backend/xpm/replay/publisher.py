@@ -191,7 +191,13 @@ class ReplayPublisher:
         return self._stopped.is_set()
 
     def state(self) -> ReplayState:
-        """The current :class:`ReplayState`, as published on the control topic."""
+        """The current :class:`ReplayState`, as published on the control topic.
+
+        ``dataset_ts`` is clamped to ``dataset_end``: after the final
+        ``advance()`` the cursor points one ``row_interval`` past the last row,
+        and a retained state outside ``[dataset_start, dataset_end]`` would put
+        the dashboard's scrub head off the end of its own timeline.
+        """
         return ReplayState(
             run_id=self._run_id,
             plant_id=self._plant_id,
@@ -200,7 +206,7 @@ class ReplayPublisher:
             playing=self._clock.playing,
             loop=self._loop,
             loop_index=self._loop_index,
-            dataset_ts=self._clock.dataset_ts,
+            dataset_ts=min(self._clock.dataset_ts, self._schedule.dataset_end),
             dataset_start=self._schedule.dataset_start,
             dataset_end=self._schedule.dataset_end,
             rows_published=self._rows_published,
@@ -256,11 +262,16 @@ class ReplayPublisher:
     # -- commands (backend.md §3.3) ---------------------------------------- #
 
     async def play(self) -> None:
-        """Resume publishing; idempotent."""
+        """Resume publishing; idempotent.
+
+        Playing a *finished* run is a real restart, not a rewind: R12 requires
+        every fresh pass over the dataset to mint a new ``run_id``, because
+        ``alert_id`` is derived from ``run_id|machine_id|dataset_ts|model_id``
+        and a second pass under the old id would collide with the first.
+        """
         if self._clock.exhausted:
-            # A finished non-looping run restarts rather than refusing to play.
-            self._clock.reset()
-            self._rows_published = 0
+            await self.restart()
+            return
         changed = self._clock.play()
         self._resumed.set()
         _log.info("replay.play", run_id=self._run_id, changed=changed)
@@ -299,6 +310,11 @@ class ReplayPublisher:
 
         A plant switch is a restart with ``plant_id``: the schedule, machine
         set, dataset bounds and ``run_id`` all change together.
+
+        ``loop_index`` therefore counts **new runs**, not dataset loops: a
+        restart, a seed change and a plant switch each increment it. That is
+        what keeps ``run_id`` unique, since ``loop_index`` is the only part of
+        its material that a same-seed, same-plant restart changes.
         """
         if plant_id is not None and plant_id != self._plant_id:
             self._plant_id = plant_id
@@ -312,6 +328,8 @@ class ReplayPublisher:
         # A restart re-paces nothing: the operator's chosen speed survives it.
         self._clock.set_speed(speed)
         self._run_id = self._mint_run_id()
+        # A restart revives a run that exhausted itself under `loop=false`.
+        self._stopped.clear()
         self._resumed.set()
         _log.info(
             "replay.restart",
@@ -341,8 +359,12 @@ class ReplayPublisher:
         rows = self._schedule.ticks[tick]
         batch = self._settings.replay.publish_batch
         for position, row in enumerate(rows):
-            # Yield to the event loop every `publish_batch` machines so a
-            # control command never waits for a whole wide tick to drain.
+            # Yield to the event loop at every `publish_batch` boundary so a
+            # control command never waits for a whole wide tick to drain. With
+            # the shipped defaults (`publish_batch` 12, 12 AI4I machines) a tick
+            # is exactly one chunk and this never fires; it only does work when
+            # `publish_batch < machine_count`. Boundaries are counted *before*
+            # publishing, so there is no pointless yield after the last row.
             if position and position % batch == 0:
                 await self._time.sleep(0.0)
             await self._client.publish(
