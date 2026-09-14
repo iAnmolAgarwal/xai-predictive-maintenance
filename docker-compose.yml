@@ -53,7 +53,7 @@ services:
     build:
       context: .
       dockerfile: docker/api.Dockerfile
-    image: ${XPM_IMAGE_PREFIX:-ghcr.io/anmolagarwal}/xpm-api:${XPM_IMAGE_TAG:-latest}
+    image: ${XPM_IMAGE_PREFIX:-ghcr.io/ianmolagarwal}/xpm-api:${XPM_IMAGE_TAG:-latest}
     container_name: xpm-api
     environment:
       <<: *xpm-env
@@ -89,7 +89,7 @@ services:
     build:
       context: .
       dockerfile: docker/replay.Dockerfile
-    image: ${XPM_IMAGE_PREFIX:-ghcr.io/anmolagarwal}/xpm-replay:${XPM_IMAGE_TAG:-latest}
+    image: ${XPM_IMAGE_PREFIX:-ghcr.io/ianmolagarwal}/xpm-replay:${XPM_IMAGE_TAG:-latest}
     container_name: xpm-replay
     depends_on:
       mosquitto:
@@ -115,7 +115,7 @@ services:
     build:
       context: ./web
       dockerfile: Dockerfile
-    image: ${XPM_IMAGE_PREFIX:-ghcr.io/anmolagarwal}/xpm-web:${XPM_IMAGE_TAG:-latest}
+    image: ${XPM_IMAGE_PREFIX:-ghcr.io/ianmolagarwal}/xpm-web:${XPM_IMAGE_TAG:-latest}
     container_name: xpm-web
     restart: unless-stopped
     ports:
@@ -134,7 +134,7 @@ services:
     build:
       context: .
       dockerfile: docker/nodered.Dockerfile
-    image: ${XPM_IMAGE_PREFIX:-ghcr.io/anmolagarwal}/xpm-nodered:${XPM_IMAGE_TAG:-latest}
+    image: ${XPM_IMAGE_PREFIX:-ghcr.io/ianmolagarwal}/xpm-nodered:${XPM_IMAGE_TAG:-latest}
     container_name: xpm-nodered
     restart: unless-stopped
     environment:
