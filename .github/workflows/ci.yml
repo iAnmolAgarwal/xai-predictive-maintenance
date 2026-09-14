@@ -2,10 +2,13 @@ name: ci
 
 on:
   push:
+    branches: [main]
   pull_request:
 
+# Push-to-main and pull-request runs live in separate groups, so opening a PR
+# from a branch never cancels the main run that publishes images.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -27,6 +30,8 @@ jobs:
       contracts: ${{ steps.probe.outputs.contracts }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - id: probe
         run: |
           test -f web/package.json && echo "web=true" >> "$GITHUB_OUTPUT" || echo "web=false" >> "$GITHUB_OUTPUT"
@@ -37,6 +42,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: astral-sh/setup-uv@v5
         with:
@@ -77,6 +84,8 @@ jobs:
     if: needs.detect.outputs.web == 'true'
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: pnpm/action-setup@v4
 
@@ -105,6 +114,8 @@ jobs:
     if: needs.detect.outputs.contracts == 'true'
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: astral-sh/setup-uv@v5
         with:
@@ -133,6 +144,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Lowercase the owner (GHCR rejects uppercase namespaces)
         id: owner
