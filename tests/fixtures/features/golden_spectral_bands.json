@@ -1,5 +1,5 @@
 {
-  "description": "Deterministic synthetic 1.024 s / 20 kHz snapshots run through xpm.features.spectral. Generated once by T-FEATURES from the offline path; regenerate only with a documented reason.",
+  "description": "Deterministic synthetic 1.024 s / 20 kHz snapshots run through xpm.features.spectral. Regenerate with `XPM_REGENERATE_GOLDENS=1 uv run pytest tests/features -k golden`, which rewrites this file from tests/features/test_spectral.py::_golden_payload.",
   "sample_rate_hz": 20000.0,
   "samples": 20480,
   "signals": {
