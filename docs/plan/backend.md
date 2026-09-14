@@ -390,11 +390,13 @@ backend/xpm/replay/clock.py
 backend/xpm/replay/mapping.py
 backend/xpm/replay/publisher.py
 backend/xpm/replay/control.py
+backend/xpm/replay/runner.py   # R21: covered serve()/reconnect loop; __main__.py is a shim
 tests/replay/test_clock.py
 tests/replay/test_mapping.py
 tests/replay/test_determinism.py
 tests/replay/test_control.py
 tests/replay/test_loop_run_id.py
+tests/replay/test_runner.py
 tests/fixtures/replay/golden_run_seed42_1x.jsonl
 ```
 `main.py` is renamed `__main__.py` so the container entrypoint is
