@@ -85,6 +85,11 @@ known-first-party = ["xpm"]
 
 [tool.mypy]
 python_version = "3.12"
+# The pydantic plugin synthesises each model's real __init__ signature, so
+# `Settings()` type-checks without a `# type: ignore[call-arg]` and a wrong
+# field name or type is an error at the call site instead of a runtime
+# ValidationError.
+plugins = ["pydantic.mypy"]
 files = ["backend"]
 mypy_path = "backend"
 strict = true
@@ -94,6 +99,11 @@ enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 [[tool.mypy.overrides]]
 module = ["lightgbm.*", "shap.*", "sklearn.*", "tdigest.*", "ucimlrepo.*", "scipy.*"]
 ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
 minversion = "8.0"
