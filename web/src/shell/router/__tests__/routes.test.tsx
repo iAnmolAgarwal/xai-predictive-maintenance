@@ -37,7 +37,7 @@ describe('routing', () => {
     seedStore();
     renderAt('/');
 
-    expect(screen.getByTestId('machine-grid')).toBeInTheDocument();
+    expect(screen.getByTestId('floor-placeholder-grid')).toBeInTheDocument();
     await user.click(screen.getByTestId('floor-demo-link'));
     await waitFor(() => {
       expect(screen.getByTestId('machine-detail')).toBeInTheDocument();
@@ -63,7 +63,7 @@ describe('routing', () => {
 
     expect(screen.getByTestId('empty-machine-not-found')).toHaveTextContent('ai4i-99');
     await user.click(screen.getByRole('button', { name: 'Back to plant floor' }));
-    expect(screen.getByTestId('machine-grid')).toBeInTheDocument();
+    expect(screen.getByTestId('floor-placeholder-grid')).toBeInTheDocument();
   });
 
   it('renders a designed not-found state for an unknown route', () => {
@@ -83,10 +83,10 @@ describe('routing', () => {
     });
     renderAt('/');
 
-    expect(screen.getByTestId('empty-plant-unavailable')).toHaveTextContent(
+    expect(screen.getByTestId('plant-unavailable')).toHaveTextContent(
       'IMS archive download failed after 3 attempts',
     );
-    expect(screen.queryByTestId('machine-grid')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('floor-placeholder-grid')).not.toBeInTheDocument();
   });
 
   it('mounts the four detail slots for a known machine', () => {

@@ -34,12 +34,16 @@ function PlantFloorView() {
     setSelectedMachineId(null);
   }, [setSelectedMachineId]);
 
+  // The shell owns `plant-unavailable` and renders it instead of the grid slot,
+  // so T-WEB-PLANT-FLOOR never draws a second node under the same testid.
   if (plant && !plant.available) {
     return (
       <section className={styles.view}>
         <EmptyState
           area="plant-unavailable"
+          testId="plant-unavailable"
           glyph="○"
+          titleAs="h1"
           title={`${plant.display_name} is unavailable`}
           body={plant.unavailable_reason ?? undefined}
         />
@@ -52,7 +56,12 @@ function PlantFloorView() {
       <header className={styles.viewHeader}>
         <h1 className={styles.viewTitle}>
           Machines
-          {plant ? <span className={styles.viewCount}>{plant.machine_count}</span> : null}
+          {plant ? (
+            <span className={styles.viewCount}>
+              {plant.machine_count}
+              <span className={styles.srOnly}> machines in this plant</span>
+            </span>
+          ) : null}
         </h1>
         {plant ? (
           <Button
@@ -93,6 +102,7 @@ function MachineDetailView() {
         <EmptyState
           area="machine-not-found"
           glyph="○"
+          titleAs="h1"
           title={`No machine named ${machineId}`}
           body="This plant does not publish that machine. Pick one from the plant floor."
           action={<Button onClick={() => void navigate('/')}>Back to plant floor</Button>}
@@ -137,6 +147,7 @@ function NotFoundView() {
       <EmptyState
         area="route-not-found"
         glyph="○"
+        titleAs="h1"
         title="That view does not exist"
         body="The dashboard has a plant floor and one page per machine."
         action={<Button onClick={() => void navigate('/')}>Back to plant floor</Button>}
