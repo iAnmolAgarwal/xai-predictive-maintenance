@@ -5,7 +5,9 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 
-# corepack pins pnpm from packageManager-free installs deterministically.
+# corepack resolves the exact pnpm named in package.json's `packageManager`
+# field, so the image is reproducible and a future pnpm major cannot change how
+# the lockfile or pnpm-workspace.yaml are read.
 RUN corepack enable
 
 # Dependencies first: this layer is cached until the lockfile changes.
