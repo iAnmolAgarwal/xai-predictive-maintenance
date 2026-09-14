@@ -4,8 +4,11 @@ This is what lets the explanation templater say "sat at the 97th percentile of
 this machine's own history" with a real number (§1, §3.9), and what the streak
 counter tests against for "above its 95th percentile".
 
-**Backend choice, and why it is not the `tdigest` package.** ``settings.yaml``
-names ``features.percentile_algorithm: tdigest``. A t-digest is the right shape
+**Backend choice, and why it is not the `tdigest` package.**
+``features.percentile_algorithm`` defaults to ``exact`` in ``settings.yaml``
+and in :class:`xpm.contracts.settings.FeaturesSettings`; ``tdigest`` is still
+accepted there as a deprecated alias that selects this same backend, so configs
+written before the measurement below keep loading. A t-digest is the right shape
 for an unbounded stream, but the online engine has to rank *every* feature of
 *every* row — 154 features for ``ai4i``, 198 for ``ims`` — and the PyPI
 ``tdigest`` package costs, measured on this machine at
@@ -106,9 +109,10 @@ from xpm.features.stats import Float64Array
 
 __all__ = ["RANK_RTOL", "SUPPORTED_ALGORITHMS", "PercentileBank"]
 
-#: Spellings of ``features.percentile_algorithm`` this module serves. Both map
-#: to the exact empirical backend; see the module docstring for the measurement
-#: that rules the sketch out of the online path.
+#: Spellings of ``features.percentile_algorithm`` this module serves. The
+#: settings default is ``"exact"``; ``"tdigest"`` is the deprecated alias and
+#: maps to the same exact empirical backend. See the module docstring for the
+#: measurement that rules the sketch out of the online path.
 SUPPORTED_ALGORITHMS: Final[tuple[str, ...]] = ("tdigest", "exact")
 
 _PERCENT: Final[float] = 100.0
