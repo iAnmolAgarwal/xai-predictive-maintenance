@@ -33,12 +33,12 @@ data-image:  ## Build the data-tooling image that carries the IMS archive extrac
 
 data-ims:  ## Fetch and process the NASA IMS dataset (1.0 GB download) (T-DATA)
 	@if command -v unar >/dev/null 2>&1; then \
-		echo "unar found on PATH: extracting on the host"; \
+		echo "unar found on PATH: extracting on the host" && \
 		uv run python scripts/fetch_data.py --plant ims; \
 	else \
-		echo "unar not on PATH: extracting inside $(XPM_DATA_IMAGE)"; \
-		$(MAKE) data-image; \
-		mkdir -p "$(CURDIR)/data" "$(CURDIR)/config"; \
+		echo "unar not on PATH: extracting inside $(XPM_DATA_IMAGE)" && \
+		$(MAKE) data-image && \
+		mkdir -p "$(CURDIR)/data" "$(CURDIR)/config" && \
 		docker run --rm \
 			--user "$$(id -u):$$(id -g)" \
 			--security-opt no-new-privileges:true \
@@ -54,13 +54,16 @@ contracts:  ## Regenerate contracts/*.json and the frontend's TypeScript types (
 	uv run python scripts/export_ws_schema.py
 	pnpm -C web exec json2ts -i ../contracts/ws-schema.json -o src/contracts/ws.ts --additionalProperties false
 
+# Every step below is &&-chained so a failing export or a non-empty diff is the
+# recipe's exit status. With ';' separators the status would be echo's and drift
+# would pass silently. The EXIT trap removes the temp dir on both paths.
 contracts-check:  ## Fail if the committed contract artefacts have drifted
-	@tmp="$$(mktemp -d)"; \
-	trap 'rm -rf "$$tmp"' EXIT; \
-	uv run python scripts/export_openapi.py --out "$$tmp/openapi.json"; \
-	uv run python scripts/export_ws_schema.py --out "$$tmp/ws-schema.json"; \
-	diff -u contracts/openapi.json "$$tmp/openapi.json"; \
-	diff -u contracts/ws-schema.json "$$tmp/ws-schema.json"; \
+	@tmp="$$(mktemp -d)" && \
+	trap 'rm -rf "$$tmp"' EXIT && \
+	uv run python scripts/export_openapi.py --out "$$tmp/openapi.json" && \
+	uv run python scripts/export_ws_schema.py --out "$$tmp/ws-schema.json" && \
+	diff -u contracts/openapi.json "$$tmp/openapi.json" && \
+	diff -u contracts/ws-schema.json "$$tmp/ws-schema.json" && \
 	echo "contracts are current"
 
 train:  ## Train LightGBM + RandomForest for both plants (T-MODEL)
