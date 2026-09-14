@@ -10,9 +10,12 @@ Updated: 2026-09-15 00:05 IST — PAUSED on usage limit mid Phase 3 review loop.
   tests/features golden `air_temp_slope_4h`, one rank off on Linux).
 - Worktrees under the session scratchpad (`git worktree list`). Builders may
   have died mid-fix on the usage limit; their uncommitted work is on disk:
-  - wt-features-ci / fix/features-ci (off cc8f1a0, 5 dirty files, no commits
-    yet): the CI fix (rank tolerant to ULP noise, goldens regen, Linux run in
-    docker). Brief in the transcript; fix must merge FIRST.
+  - wt-features-ci / fix/features-ci (off cc8f1a0, 2 commits 3a01ed1 217458e,
+    clean, no trailers): BUILD DONE, NOT YET REVIEWED. Rank tie test tolerant
+    to float64 noise (RANK_RTOL=1e-9 scaled by running max |value|), ai4i
+    golden regenerated (28 ranks moved, 0 values), ULP-perturbation tests,
+    benchmark-disabled guard. Proven on x86-64 Linux in docker (pre-fix main
+    fails, branch passes 581). Next: code-reviewer, then merge FIRST.
   - wt-web-shell / feat/web-shell (7 commits, 23 dirty files): fix pass 1 in
     progress against scratchpad/reviews/web-shell-code-1.md (5 blockers) and
     web-shell-ux-1.md (6 blockers). Re-review with code-reviewer AND
