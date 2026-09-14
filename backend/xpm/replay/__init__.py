@@ -27,8 +27,17 @@ from xpm.replay.publisher import (
     run_id_for,
     telemetry_topic,
 )
+from xpm.replay.runner import (
+    ClientFactory,
+    MqttConnection,
+    client_identifier,
+    initial_run_id,
+    serve,
+)
 
 __all__ = [
+    "ClientFactory",
+    "MqttConnection",
     "MqttPublisherClient",
     "RealTimeSource",
     "ReplayClock",
@@ -39,10 +48,13 @@ __all__ = [
     "ScheduledRow",
     "TimeSource",
     "build_schedule",
+    "client_identifier",
     "control_cmd_topic",
     "control_state_topic",
     "expected_machine_id",
+    "initial_run_id",
     "plant_row_interval",
     "run_id_for",
+    "serve",
     "telemetry_topic",
 ]
