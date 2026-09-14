@@ -15,7 +15,7 @@ import pytest
 
 from xpm.config import get_settings
 from xpm.contracts.settings import Settings
-from xpm.features.percentiles import SUPPORTED_ALGORITHMS, PercentileBank
+from xpm.features.percentiles import RANK_RTOL, SUPPORTED_ALGORITHMS, PercentileBank
 
 SAMPLES = 10_000
 TOLERANCE_PERCENTILE_POINTS = 1.0
@@ -27,6 +27,51 @@ def _settings() -> Settings:
 
 def _exact_rank(history: np.ndarray, value: float) -> float:
     return float(np.count_nonzero(history <= value)) / history.size * 100.0
+
+
+def _ranks(values: np.ndarray) -> np.ndarray:
+    """Replay a one-feature series and collect its ranks."""
+    bank = PercentileBank(1)
+    return np.array([float(bank.update(np.array([value]))[0]) for value in values])
+
+
+def test_ranks_survive_one_ulp_of_platform_noise() -> None:
+    """The CI failure this guards: a tie split by float64 reduction order.
+
+    ``air_temp_slope_4h`` produced two mathematically equal window slopes that
+    landed three ULPs apart between arm64 and x86-64, flipping one count and
+    moving a rank from 196/223 to 197/223. Perturbing every value by a ULP in
+    the direction least favourable to the tie must change no rank at all.
+    """
+    generator = np.random.default_rng(20260915)
+    base = generator.normal(size=300)
+    # Structural repeats are what actually produces the ties: the same window
+    # contents give the same statistic twice.
+    base[150:] = base[:150]
+
+    up = np.nextafter(base, np.inf)
+    down = np.nextafter(base, -np.inf)
+    alternating = np.where(np.arange(base.size) % 2 == 0, up, down)
+
+    reference = _ranks(base)
+    for perturbed in (up, down, alternating):
+        np.testing.assert_array_equal(_ranks(perturbed), reference)
+
+
+def test_the_tie_band_does_not_swallow_distinct_values() -> None:
+    """A tolerance wide enough to hide a real difference would be a bug.
+
+    Values a thousand times further apart than ``RANK_RTOL`` must still rank
+    apart; values inside the band must tie.
+    """
+    warmup = _settings().features.percentile_warmup_samples
+    bank = PercentileBank(1)
+    for _ in range(warmup):
+        bank.update(np.array([1.0]))
+    outside = float(bank.update(np.array([1.0 - RANK_RTOL * 1000.0]))[0])
+    inside = float(bank.update(np.array([1.0 - RANK_RTOL / 1000.0]))[0])
+    assert outside < 100.0
+    assert inside == pytest.approx(100.0)
 
 
 def test_ranks_match_the_exact_empirical_percentile() -> None:

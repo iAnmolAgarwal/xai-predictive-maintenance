@@ -115,6 +115,16 @@ def slope(block: Float64Array, times_hours: Float64Array) -> Float64Array:
 
     ``NaN`` is also returned when every sample shares one timestamp, which would
     otherwise be a division by a zero time variance.
+
+    Mean-centring both operands is a conditioning choice, not a determinism one.
+    The dot product below is a float64 reduction, and no float64 reduction is
+    bit-identical across platforms: ``@`` dispatches to whichever BLAS the wheel
+    was built against and NumPy's own pairwise summation blocks differently for
+    NEON and AVX2. Rewriting it as an explicit multiply-and-sum would move the
+    divergence rather than remove it, at the cost of a temporary the size of the
+    window. The engine absorbs the last few ULPs where it actually matters —
+    :data:`xpm.features.percentiles.RANK_RTOL`, the one place a float64
+    comparison turns into a step function.
     """
     if block.shape[0] < 2:
         return _empty(block)

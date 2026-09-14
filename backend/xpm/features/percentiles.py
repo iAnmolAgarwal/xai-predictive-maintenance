@@ -21,6 +21,34 @@ which measured ~40 % faster than the row-major layout; unused capacity is
 ``NaN``-filled so the comparison can run over the whole contiguous block, and
 ``NaN`` never satisfies ``<=``.
 
+**The tie test is tolerant, and has to be.** A rank is a counting operation, so
+it is a step function of the comparison ``history <= value`` — and the values
+being compared are float64 reductions over a rolling window. No such reduction
+is bit-identical across platforms: ``a @ b`` lands in whichever BLAS the wheel
+was built against (Accelerate on Apple silicon, OpenBLAS on x86-64) and NumPy's
+own pairwise summation blocks differently for NEON and AVX2. Two mathematically
+equal window slopes therefore came out three ULPs apart between a developer
+machine and a CI runner, one count flipped, and a rank moved from 196/223 to
+197/223 — a golden fixture failing on a value that was never actually different.
+
+So a history entry counts as "at or below" the query when it is not
+*meaningfully* greater:
+
+    history <= value + RANK_RTOL * max(|value|, scale)
+
+``scale`` is the feature's own running maximum absolute value, which is what
+makes the tolerance usable for a statistic that cancels towards zero: a slope
+whose value is 1e-18 because its window is flat still gets a tolerance drawn
+from the magnitudes that slope actually reaches, instead of 1e-27. ``RANK_RTOL``
+is 1e-9 — about seven orders of magnitude above float64 rounding noise and,
+on the real datasets, six orders below the closest genuinely distinct pair of
+values a feature produces (measured on ``air_temp_slope_4h``: ULP neighbour at
+3.4e-16 relative, nearest real neighbour at 5.1e-3).
+
+:meth:`quantile` needs no such treatment and deliberately gets none: it sorts
+and interpolates rather than counting, so it has no step to fall off, and it
+stays the exact inverse-style estimator described below.
+
 The exact tracker is both faster and strictly more accurate than the sketch, and
 it is affordable because the history it ranks against is bounded by the dataset:
 834 rows per ``ai4i`` machine and 984 per ``ims`` bearing per run, ~1 MB per
@@ -59,7 +87,7 @@ from xpm.config import get_settings
 from xpm.contracts.settings import Settings
 from xpm.features.stats import Float64Array
 
-__all__ = ["SUPPORTED_ALGORITHMS", "PercentileBank"]
+__all__ = ["RANK_RTOL", "SUPPORTED_ALGORITHMS", "PercentileBank"]
 
 #: Spellings of ``features.percentile_algorithm`` this module serves. Both map
 #: to the exact empirical backend; see the module docstring for the measurement
@@ -68,11 +96,17 @@ SUPPORTED_ALGORITHMS: Final[tuple[str, ...]] = ("tdigest", "exact")
 
 _PERCENT: Final[float] = 100.0
 
+#: Relative width of the "indistinguishable from the query" band used by the
+#: rank's tie test. Sized to swallow cross-platform float64 reduction noise
+#: (~1e-16 relative) with orders of magnitude to spare, while staying far below
+#: the separation between values a feature genuinely distinguishes.
+RANK_RTOL: Final[float] = 1e-9
+
 
 class PercentileBank:
     """Exact empirical percentile ranks for one machine's feature vector."""
 
-    __slots__ = ("_block", "_counts", "_history", "_rows", "_warmup")
+    __slots__ = ("_block", "_counts", "_history", "_rows", "_scale", "_warmup")
 
     def __init__(self, n_features: int, settings: Settings | None = None) -> None:
         if n_features < 1:
@@ -87,6 +121,7 @@ class PercentileBank:
         self._block = features.percentile_compression
         self._history: Float64Array = np.full((n_features, self._block), np.nan, dtype=np.float64)
         self._counts: NDArray[np.int64] = np.zeros(n_features, dtype=np.int64)
+        self._scale: Float64Array = np.zeros(n_features, dtype=np.float64)
         self._rows = 0
 
     def __len__(self) -> int:
@@ -103,13 +138,20 @@ class PercentileBank:
         The rank is inclusive of the sample just recorded, so a feature at its
         all-time high reports exactly 100. Features that are ``NaN`` (not yet
         computable) or still inside the warmup report ``NaN``.
+
+        The comparison carries a :data:`RANK_RTOL` relative band so that a
+        history entry which differs from ``values`` only by float64 reduction
+        noise counts as a tie on every platform; see the module docstring.
         """
         if values.shape != self._counts.shape:
             raise ValueError(f"expected {self._counts.size} features, got {values.shape}")
         self._append(values)
         observed = ~np.isnan(values)
         self._counts += observed
-        below = np.count_nonzero(self._history <= values[:, None], axis=1).astype(np.float64)
+        # fmax ignores NaN, so a not-yet-computable feature leaves its scale alone.
+        self._scale = np.fmax(self._scale, np.abs(values))
+        bound = values + RANK_RTOL * np.maximum(np.abs(values), self._scale)
+        below = np.count_nonzero(self._history <= bound[:, None], axis=1).astype(np.float64)
         with np.errstate(invalid="ignore", divide="ignore"):
             ranks: Float64Array = below / self._counts * _PERCENT
         ranks[~observed] = np.nan
@@ -133,6 +175,7 @@ class PercentileBank:
         """Forget the history (used when a replay loop starts a new run)."""
         self._rows = 0
         self._counts[:] = 0
+        self._scale[:] = 0.0
         self._history[:] = np.nan
 
     def _append(self, values: Float64Array) -> None:
