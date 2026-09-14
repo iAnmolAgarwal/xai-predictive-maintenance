@@ -1,4 +1,7 @@
+import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { useStore } from '@/store';
 import { selectedPlant } from '@/store/selectors';
 import type { SlotName } from '../slots';
@@ -49,21 +52,116 @@ const COPY: Record<SlotName, FallbackCopy> = {
   },
 };
 
-/** The empty state rendered by a slot no feature has registered for. */
+/**
+ * What a region says when nothing has registered for it.
+ *
+ * Order matters: unreachable beats empty. A monitoring panel that renders "no
+ * alerts" while it cannot reach the API is lying about the plant, so as long as
+ * boot has not succeeded every region says so instead.
+ */
 export function SlotFallback({ name }: { name: SlotName }) {
   const area = name.replace('.', '-');
+  const unreachable = useStore(
+    (state) => state.plants.order.length === 0 && state.connection.error !== null,
+  );
+  const booting = useStore(
+    (state) => state.plants.order.length === 0 && state.connection.error === null,
+  );
+
+  if (unreachable) return <UnreachableState area={area} name={name} />;
+  if (booting) return <BootingState area={area} name={name} />;
   if (name === 'floor.grid') return <FloorGridFallback area={area} />;
+  if (name === 'rail.feed') return <RailFeedFallback area={area} />;
   // The top bar is 56 px tall: its empty state is one quiet line, not a panel.
   if (name === 'topbar.playback') {
     const copy = COPY[name];
+    // 56 px of chrome: the title alone, with the explanation on hover, so this
+    // never becomes the loudest thing in the bar.
     return (
-      <p className={styles.inline} data-testid={`empty-${area}`}>
-        <span aria-hidden="true">{copy.glyph}</span> {copy.title} — {copy.body}
+      <p className={styles.inline} data-testid={`empty-${area}`} title={copy.body}>
+        <span aria-hidden="true">{copy.glyph}</span> {copy.title}
       </p>
     );
   }
   const copy = COPY[name];
   return <EmptyState area={area} glyph={copy.glyph} title={copy.title} body={copy.body} />;
+}
+
+/** Copy per region for the "cannot reach the API" state. */
+const UNREACHABLE: Record<SlotName, string> = {
+  'topbar.playback': 'Transport state is unknown while the API is unreachable.',
+  'rail.feed': 'Alerts cannot be loaded while the API is unreachable.',
+  'detail.charts': 'Telemetry cannot be loaded while the API is unreachable.',
+  'detail.shap': 'Explanations cannot be loaded while the API is unreachable.',
+  'detail.whatif': 'What-if needs the API, which is unreachable.',
+  'detail.compare': 'Model comparison needs the API, which is unreachable.',
+  'floor.grid': 'Machines cannot be listed while the API is unreachable.',
+};
+
+/** The honest state when boot failed: no data, and the panel says exactly that. */
+function UnreachableState({ area, name }: { area: string; name: SlotName }) {
+  const requestBoot = useStore((state) => state.requestBoot);
+  if (name === 'topbar.playback') {
+    return (
+      <p className={styles.inline} data-testid={`error-${area}`}>
+        <span aria-hidden="true">▲</span> API unreachable
+      </p>
+    );
+  }
+  return (
+    <ErrorState
+      area={area}
+      title="Can't reach the API"
+      detail={UNREACHABLE[name]}
+      action={<Button onClick={() => requestBoot()}>Retry now</Button>}
+    />
+  );
+}
+
+/** Before the first descriptor arrives the region holds its shape, silently. */
+function BootingState({ area, name }: { area: string; name: SlotName }) {
+  if (name === 'topbar.playback') {
+    return (
+      <p className={styles.inline} data-testid={`skeleton-${area}`}>
+        Connecting…
+      </p>
+    );
+  }
+  return (
+    <div className={styles.loading} data-testid={`skeleton-${area}`}>
+      <Skeleton area={`${area}-line-1`} height={12} width="40%" />
+      <Skeleton area={`${area}-line-2`} height={160} />
+    </div>
+  );
+}
+
+/**
+ * The rail before the feed is available. The copy is read from the store rather
+ * than assumed, so it can never claim "no alerts yet" while the header beside it
+ * shows an unread badge.
+ */
+function RailFeedFallback({ area }: { area: string }) {
+  const alertCount = useStore((state) => state.alerts.order.length);
+  const copy = COPY['rail.feed'];
+
+  if (alertCount === 0) {
+    return (
+      <EmptyState area={area} glyph={copy.glyph} title={copy.title} body={copy.body} />
+    );
+  }
+
+  return (
+    <EmptyState
+      area={area}
+      glyph="▲"
+      title={
+        alertCount === 1
+          ? '1 alert in this run'
+          : `${String(alertCount)} alerts in this run`
+      }
+      body="They are held in the store and render here as soon as the feed is available."
+    />
+  );
 }
 
 /**
@@ -84,20 +182,32 @@ function FloorGridFallback({ area }: { area: string }) {
     );
   }
 
-  const ids =
-    order.length > 0
-      ? order
-      : Array.from({ length: count }, (_, index) => `machine-${index + 1}`);
+  // Before the first snapshot there are no machine ids, and inventing some would
+  // put fake data on screen. Skeletons hold the exact final geometry instead.
+  if (order.length === 0) {
+    return (
+      <div className={styles.floor} data-testid="floor-placeholder-grid">
+        <p className={styles.floorNote} data-testid={`empty-${area}`}>
+          {`${String(count)} machines in this plant. Waiting for the first snapshot.`}
+        </p>
+        <ul className={styles.grid}>
+          {Array.from({ length: count }, (_, index) => (
+            <li key={index} className={styles.tile}>
+              <Skeleton area={`floor-tile-${String(index + 1)}`} height={100} />
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
 
   return (
-    <div className={styles.floor} data-testid="machine-grid">
+    <div className={styles.floor} data-testid="floor-placeholder-grid">
       <p className={styles.floorNote} data-testid={`empty-${area}`}>
-        {order.length > 0
-          ? `${String(count)} machines in this plant. Tiles are waiting for their first scored row.`
-          : `${String(count)} machines in this plant. Waiting for the first snapshot.`}
+        {`${String(count)} machines in this plant. Tiles are waiting for their first scored row.`}
       </p>
       <ul className={styles.grid}>
-        {ids.map((id) => {
+        {order.map((id) => {
           const machine = byId[id];
           return (
             <li
@@ -105,10 +215,14 @@ function FloorGridFallback({ area }: { area: string }) {
               className={styles.tile}
               data-testid={`floor-placeholder-tile-${id}`}
             >
-              <span className={styles.tileId}>{machine?.display_name ?? id}</span>
-              <span className={styles.tileMeta}>
-                {machine ? machine.machine_id : 'awaiting snapshot'}
-              </span>
+              <div className={styles.tileHead}>
+                {/* The ring and sparkline boxes are reserved now, at the size the
+                    real tile uses, so the grid does not jump when it lands. */}
+                <span className={styles.tileRing} aria-hidden="true" />
+                <span className={styles.tileId}>{machine?.display_name ?? id}</span>
+              </div>
+              <span className={styles.tileSpark} aria-hidden="true" />
+              <span className={styles.tileMeta}>{machine?.machine_id ?? id}</span>
             </li>
           );
         })}

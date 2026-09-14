@@ -31,7 +31,7 @@ describe('App', () => {
     expect(useStore.getState().config?.values['api.ws_ping_seconds']).toBe(10);
   });
 
-  it('shows a dismissible banner for connection-level errors only', async () => {
+  it('banners connection failures with designed copy and a retry', async () => {
     const user = userEvent.setup();
     render(<App />);
 
@@ -40,14 +40,29 @@ describe('App', () => {
     // Let the socket finish opening first: a successful connect clears any
     // previous error, which would otherwise race this assertion.
     await waitFor(() => expect(useStore.getState().connection.status).toBe('open'));
-    useStore.getState().setConnectionError('api unreachable');
-    const banner = await screen.findByTestId('error-connection');
-    expect(banner).toHaveTextContent('api unreachable');
+    useStore
+      .getState()
+      .setConnectionError('Cannot reach the API. 500 Internal Server Error');
 
-    // Backpressure is not an error: it never raises this banner.
-    useStore.getState().setConnectionDegraded(true);
-    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+    const banner = await screen.findByTestId('error-connection');
+    expect(banner).toHaveTextContent(/Can.t reach the API/);
+    // The transport's own words are kept, but out of the headline.
+    expect(screen.getByTestId('error-connection-detail')).toHaveTextContent(
+      '500 Internal Server Error',
+    );
+
+    const before = useStore.getState().connection.bootAttempt;
+    await user.click(screen.getByTestId('error-connection-retry'));
+    expect(useStore.getState().connection.bootAttempt).toBe(before + 1);
     expect(screen.queryByTestId('error-connection')).not.toBeInTheDocument();
-    expect(useStore.getState().connection.degraded).toBe(true);
+  });
+
+  it('keeps backpressure off the banner: it is a degraded pill, not an error', async () => {
+    render(<App />);
+    await waitFor(() => expect(useStore.getState().connection.status).toBe('open'));
+
+    useStore.getState().setConnectionDegraded(true);
+    expect(screen.queryByTestId('error-connection')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('connection-pill')).toHaveTextContent('DEGRADED');
   });
 });
