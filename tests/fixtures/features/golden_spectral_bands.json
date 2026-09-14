@@ -1,0 +1,100 @@
+{
+  "description": "Deterministic synthetic 1.024 s / 20 kHz snapshots run through xpm.features.spectral. Generated once by T-FEATURES from the offline path; regenerate only with a documented reason.",
+  "sample_rate_hz": 20000.0,
+  "samples": 20480,
+  "signals": {
+    "sine_1khz": {
+      "band_energy_share": {
+        "vibration_0k5khz": 4.1449376778411375e-13,
+        "vibration_1khz": 0.9999999999991879,
+        "vibration_2khz": 3.9599481863186036e-13,
+        "vibration_3khz": 1.5523449541403615e-15,
+        "vibration_5khz": 1.268939794671085e-16,
+        "vibration_8khz": 3.3971619609358117e-18
+      },
+      "band_mean_psd": {
+        "vibration_0k5khz": 4.144937677840911e-16,
+        "vibration_1khz": 0.0004999999999995667,
+        "vibration_2khz": 1.9799740931591938e-16,
+        "vibration_3khz": 7.761724770701384e-19,
+        "vibration_5khz": 2.5378795893420316e-20,
+        "vibration_8khz": 4.246452451169533e-22
+      },
+      "channels": {
+        "vibration_0k5khz": 4.144937677840911e-16,
+        "vibration_1khz": 0.0004999999999995667,
+        "vibration_2khz": 1.9799740931591938e-16,
+        "vibration_3khz": 7.761724770701384e-19,
+        "vibration_5khz": 2.5378795893420316e-20,
+        "vibration_8khz": 4.246452451169533e-22,
+        "vibration_crest": 1.4142135623730943,
+        "vibration_kurtosis": 1.5000000000000007,
+        "vibration_rms": 0.7071067811865479
+      },
+      "dominant_band": "vibration_1khz",
+      "parseval_ratio": 0.9999999999999847
+    },
+    "sine_3khz": {
+      "band_energy_share": {
+        "vibration_0k5khz": 3.051719318456243e-16,
+        "vibration_1khz": 4.220988575407187e-15,
+        "vibration_2khz": 1.030119666308024e-12,
+        "vibration_3khz": 0.9999999999978905,
+        "vibration_5khz": 1.0748068905823948e-12,
+        "vibration_8khz": 1.3533605164601497e-16
+      },
+      "band_mean_psd": {
+        "vibration_0k5khz": 3.0517193184559174e-19,
+        "vibration_1khz": 2.1104942877033683e-18,
+        "vibration_2khz": 5.150598331539571e-16,
+        "vibration_3khz": 0.0004999999999988918,
+        "vibration_5khz": 2.1496137811645601e-16,
+        "vibration_8khz": 1.6917006455750066e-20
+      },
+      "channels": {
+        "vibration_0k5khz": 3.0517193184559174e-19,
+        "vibration_1khz": 2.1104942877033683e-18,
+        "vibration_2khz": 5.150598331539571e-16,
+        "vibration_3khz": 0.0004999999999988918,
+        "vibration_5khz": 2.1496137811645601e-16,
+        "vibration_8khz": 1.6917006455750066e-20,
+        "vibration_crest": 1.4142135623730934,
+        "vibration_kurtosis": 1.4999999999999987,
+        "vibration_rms": 0.7071067811865483
+      },
+      "dominant_band": "vibration_3khz",
+      "parseval_ratio": 0.9999999999999966
+    },
+    "sine_3khz_in_noise": {
+      "band_energy_share": {
+        "vibration_0k5khz": 0.003775289546615876,
+        "vibration_1khz": 0.00718842949954831,
+        "vibration_2khz": 0.007841334146588838,
+        "vibration_3khz": 0.9330399851226032,
+        "vibration_5khz": 0.01878988240502289,
+        "vibration_8khz": 0.029365079279620815
+      },
+      "band_mean_psd": {
+        "vibration_0k5khz": 1.0157862699544026e-06,
+        "vibration_1khz": 9.67065955871082e-07,
+        "vibration_2khz": 1.0549018116199063e-06,
+        "vibration_3khz": 0.0001255227174635611,
+        "vibration_5khz": 1.0111279850409872e-06,
+        "vibration_8khz": 9.876277031221147e-07
+      },
+      "channels": {
+        "vibration_0k5khz": 1.0157862699544026e-06,
+        "vibration_1khz": 9.67065955871082e-07,
+        "vibration_2khz": 1.0549018116199063e-06,
+        "vibration_3khz": 0.0001255227174635611,
+        "vibration_5khz": 1.0111279850409872e-06,
+        "vibration_8khz": 9.876277031221147e-07,
+        "vibration_crest": 2.2953509361282496,
+        "vibration_kurtosis": 1.7160121296533337,
+        "vibration_rms": 0.36704564532549994
+      },
+      "dominant_band": "vibration_3khz",
+      "parseval_ratio": 0.9987571464851341
+    }
+  }
+}
