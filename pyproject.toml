@@ -18,7 +18,9 @@ dependencies = [
     "aiomqtt>=2.0,<3.0",
     "sqlalchemy[asyncio]>=2.0,<3.0",
     "aiosqlite>=0.20,<1.0",
-    "numpy>=1.26,<2.4",  # numba (via shap) requires numpy<2.4; see report
+    # shap imports numba, and numba/llvmlite only support numpy<2.4; a newer
+    # numpy resolves but fails at `import shap` with a numba ABI error.
+    "numpy>=1.26,<2.4",
     "pandas>=2.2,<3.0",
     "pyarrow>=16.0",
     "scipy>=1.13,<2.0",

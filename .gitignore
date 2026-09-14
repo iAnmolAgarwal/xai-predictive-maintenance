@@ -34,6 +34,9 @@ data/*.db
 data/*.db-*
 # Processed build outputs ARE committed so a fresh clone streams both plants
 # with zero downloads. They must stay under 5 MB in total.
+# These two negations are currently no-ops -- nothing above ignores
+# data/processed -- and are kept deliberately (R2) so that tightening the rules
+# above to `data/**` cannot silently stop the committed parquet from tracking.
 !data/processed/**/*.parquet
 !data/processed/**/*.json
 # Model artefacts are reproducible from the committed processed data + seed.

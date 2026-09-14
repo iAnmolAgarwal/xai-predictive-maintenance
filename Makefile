@@ -9,8 +9,12 @@ SHELL := /bin/sh
 # building locally (R1).
 PULL ?=
 
-.PHONY: help setup data data-ims contracts contracts-check train evaluate \
-        lint typecheck test e2e dev down check media
+# Tag of the data-tooling image (docker/data.Dockerfile), which carries the
+# `unar`/`7z` extractors the IMS archive needs.
+XPM_DATA_IMAGE ?= xpm-data:local
+
+.PHONY: help setup data data-image data-ims contracts contracts-check train \
+        evaluate lint typecheck test e2e dev down check media
 
 help:  ## List the available targets
 	@grep -hE '^[a-z][a-z0-9-]*:.*?## ' $(MAKEFILE_LIST) \
@@ -24,8 +28,25 @@ setup:  ## Install Python, Node and git-hook tooling
 data:  ## Fetch and process the AI4I 2020 dataset (T-DATA)
 	uv run python scripts/fetch_data.py --plant ai4i
 
-data-ims:  ## Fetch and process the NASA IMS dataset (1.0 GB download, needs `unar`) (T-DATA)
-	uv run python scripts/fetch_data.py --plant ims
+data-image:  ## Build the data-tooling image that carries the IMS archive extractors
+	docker build -f docker/data.Dockerfile -t $(XPM_DATA_IMAGE) .
+
+data-ims:  ## Fetch and process the NASA IMS dataset (1.0 GB download) (T-DATA)
+	@if command -v unar >/dev/null 2>&1; then \
+		echo "unar found on PATH: extracting on the host"; \
+		uv run python scripts/fetch_data.py --plant ims; \
+	else \
+		echo "unar not on PATH: extracting inside $(XPM_DATA_IMAGE)"; \
+		$(MAKE) data-image; \
+		mkdir -p "$(CURDIR)/data" "$(CURDIR)/config"; \
+		docker run --rm \
+			--user "$$(id -u):$$(id -g)" \
+			--security-opt no-new-privileges:true \
+			-e HOME=/tmp \
+			-v "$(CURDIR)/config:/app/config:ro" \
+			-v "$(CURDIR)/data:/app/data" \
+			$(XPM_DATA_IMAGE) python scripts/fetch_data.py --plant ims; \
+	fi
 
 contracts:  ## Regenerate contracts/*.json and the frontend's TypeScript types (T-CONTRACTS)
 	uv run python scripts/export_openapi.py
