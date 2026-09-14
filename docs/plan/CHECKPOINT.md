@@ -22,9 +22,12 @@ Updated: 2026-09-15 00:05 IST — PAUSED on usage limit mid Phase 3 review loop.
     ux-reviewer after the pass.
   - wt-features-settings / fix/features-settings (4 commits, clean):
     APPROVED (features-settings-code-1.md). Merge after the CI fix.
-  - wt-model / feat/model (6 dirty files, no commits): T-MODEL build in
-    progress (Phase 4, started early). Resume by re-briefing a backend-builder
-    to continue from the on-disk state.
+  - wt-model / feat/model (6 commits 57f3b44..2a00642, clean, no trailers):
+    T-MODEL BUILD DONE, NOT YET REVIEWED. Report in
+    scratchpad/reviews/model-build-report.md (key deviations: plant level in
+    registry path, grouped_time split rule, warm-up NaN drop, libomp on mac).
+    Next: code-reviewer (check deviations against §3.7/R5/R16), then merge
+    after the Phase 3 branches.
 
 ## Resume procedure
 1. `gh auth status`; `git status`; `git worktree list`; check each worktree
