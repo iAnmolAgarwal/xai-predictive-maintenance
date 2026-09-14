@@ -1,0 +1,68 @@
+{
+  "columns": [
+    "machine_id",
+    "dataset_ts",
+    "air_temp",
+    "process_temp",
+    "temp_diff",
+    "rot_speed",
+    "torque",
+    "power",
+    "tool_wear",
+    "machine_failure",
+    "twf",
+    "hdf",
+    "pwf",
+    "osf",
+    "rnf",
+    "variant",
+    "source_row"
+  ],
+  "machines": [
+    "ai4i-01",
+    "ai4i-02",
+    "ai4i-03",
+    "ai4i-04",
+    "ai4i-05",
+    "ai4i-06",
+    "ai4i-07",
+    "ai4i-08",
+    "ai4i-09",
+    "ai4i-10",
+    "ai4i-11",
+    "ai4i-12"
+  ],
+  "parameters": {
+    "channels": [
+      "air_temp",
+      "process_temp",
+      "temp_diff",
+      "rot_speed",
+      "torque",
+      "power",
+      "tool_wear"
+    ],
+    "dataset_start": "2026-01-01T00:00:00+00:00",
+    "derived": {
+      "power": "torque * rot_speed * 2*pi/60",
+      "temp_diff": "process_temp - air_temp"
+    },
+    "failure_modes": [
+      "twf",
+      "hdf",
+      "pwf",
+      "osf",
+      "rnf"
+    ],
+    "machine_count": 12,
+    "mapping": "round_robin_by_udi",
+    "row_minutes": 5
+  },
+  "parquet_bytes": 213154,
+  "parquet_file": "ai4i.parquet",
+  "parquet_sha256": "78cb6ae9ded7b8b93a9e158669a9b630bd8206abc4080b4e061a6f6ecd97e7c0",
+  "plant": "ai4i",
+  "rows": 10000,
+  "source_sha256": "9724b2eb4479a21bf4c3266bcc68ac60a96de4453a5642dc8f4304362728c966",
+  "source_url": "ucimlrepo:601"
+}
