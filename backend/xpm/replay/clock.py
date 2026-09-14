@@ -219,6 +219,21 @@ class ReplayClock:
         self._tick = 0
         self._reset_phase()
 
+    def rebase(self) -> None:
+        """Re-anchor the wall-clock deadline on *now*; the next tick is due at once.
+
+        Dataset time is untouched: :attr:`tick`, :attr:`dataset_ts` and the
+        ``seq`` derived from them are exactly what they were, so R5 survives a
+        rebase. Only the wall-clock *phase* moves.
+
+        This is what a caller uses after wall time has passed while the tick
+        loop was not running — an MQTT reconnect backoff, say. Without it that
+        wall time reads as tick debt and the loop publishes a full-speed
+        catch-up burst, which is the same failure :meth:`pause` avoids by
+        freezing the remainder.
+        """
+        self._reset_phase()
+
     def _reset_phase(self) -> None:
         self._due = self._time.monotonic()
         self._remaining = 0.0

@@ -97,17 +97,26 @@ class _ClientProxy:
 
     The publisher is built once and outlives any individual connection, so it
     talks to this proxy instead of a client. While disconnected a publish is
-    dropped rather than raising: telemetry is QoS 0 and inherently lossy, and
-    the retained ``ReplayState`` is re-published as soon as :meth:`bind` happens
-    again, so a reconnecting subscriber still learns the truth.
+    dropped rather than raising: telemetry is QoS 0 and inherently lossy (§3.3),
+    so losing frames during an outage beats taking the process down.
+
+    A dropped ``ReplayState`` is not lost for good: :meth:`bind` publishes
+    nothing itself, but :meth:`ReplayPublisher.run` re-publishes the retained
+    state as its first act on every re-entry, which is what closes the window
+    for a subscriber that reconnected during the outage.
+
+    The first drop after each :meth:`unbind` is logged at warning level, so an
+    operator sees the loss when it happens rather than in the shutdown footer.
     """
 
     def __init__(self) -> None:
         self._client: MqttConnection | None = None
+        self._warned = False
         self.dropped = 0
 
     def bind(self, client: MqttConnection) -> None:
         self._client = client
+        self._warned = False
 
     def unbind(self) -> None:
         self._client = None
@@ -121,6 +130,9 @@ class _ClientProxy:
     ) -> None:
         if self._client is None:
             self.dropped += 1
+            if not self._warned:
+                self._warned = True
+                _log.warning("replay.publish_dropped", topic=topic, qos=qos, retain=retain)
             return
         await self._client.publish(topic, payload, qos, retain)
 
@@ -181,6 +193,10 @@ async def serve(
         try:
             async with connect(identifier) as client:
                 proxy.bind(client)
+                # Wall time spent refusing and backing off is not tick debt: the
+                # tick loop was not running, so re-anchor its deadline on now.
+                # Dataset time and `seq` are untouched (R5).
+                publisher.clock.rebase()
                 delay = settings.mqtt.reconnect_min_seconds
                 await client.subscribe(control_cmd_topic(settings.mqtt.topic_root), COMMAND_QOS)
                 _log.info(
@@ -223,10 +239,11 @@ async def serve(
 
 
 def _stopped(publisher: ReplayPublisher) -> bool:
-    """Read the stop flag through a call, not an attribute.
+    """Whether the run has been asked to end.
 
-    A signal handler or a control command can set it while the connection body
-    is awaiting, which a narrowed attribute read would not reflect.
+    A named call rather than an inline ``publisher.stopped``: the reconnect loop
+    asks the question in two places with opposite consequences (keep looping /
+    stop retrying), and naming it keeps both readable.
     """
     return publisher.stopped
 
