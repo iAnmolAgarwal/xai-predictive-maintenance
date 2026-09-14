@@ -81,6 +81,9 @@
   }
 
   .readouts {
+    /* The flexible transport slot is gone at this width, so the readouts claim
+       the free space themselves and stay flush right. */
+    margin-left: auto;
     gap: var(--s-2);
   }
 

@@ -11,7 +11,8 @@
   top: var(--topbar-h);
   right: 0;
   bottom: 0;
-  width: var(--rail-w);
+  /* Never wider than the window it overlays, so the scrim stays a scrim. */
+  width: min(var(--rail-w), 92vw);
   z-index: 30;
   box-shadow: var(--shadow-3);
   animation: slide-in var(--dur-base) var(--ease-out);
