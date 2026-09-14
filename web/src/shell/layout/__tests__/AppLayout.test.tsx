@@ -96,6 +96,57 @@ describe('AppLayout', () => {
     expect(useStore.getState().alerts.unseenCount).toBe(0);
   });
 
+  it('is a real modal at overlay widths', async () => {
+    const user = userEvent.setup();
+    seedStore();
+    renderLayout(false);
+
+    const toggle = screen.getByTestId('rail-toggle');
+    await user.click(toggle);
+
+    const rail = screen.getByTestId('right-rail');
+    expect(rail).toHaveAttribute('role', 'dialog');
+    expect(rail).toHaveAttribute('aria-modal', 'true');
+    // The content behind the drawer leaves the tab order and the a11y tree.
+    expect(screen.getByTestId('main-region')).toHaveAttribute('inert');
+
+    // Focus starts inside and is contained: tabbing past the last control wraps
+    // back to the first instead of walking the hidden page.
+    const close = screen.getByRole('button', { name: 'Close alerts' });
+    expect(close).toHaveFocus();
+    await user.tab();
+    await user.tab();
+    expect(rail.contains(document.activeElement)).toBe(true);
+
+    // Escape returns focus to the control that opened it.
+    await user.keyboard('{Escape}');
+    expect(screen.queryByTestId('right-rail')).not.toBeInTheDocument();
+    expect(screen.getByTestId('rail-toggle')).toHaveFocus();
+  });
+
+  it('closes the drawer when the scrim is clicked', async () => {
+    const user = userEvent.setup();
+    seedStore();
+    renderLayout(false);
+
+    await user.click(screen.getByTestId('rail-toggle'));
+    expect(screen.getByTestId('rail-scrim')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('rail-scrim'));
+    expect(screen.queryByTestId('right-rail')).not.toBeInTheDocument();
+    expect(screen.getByTestId('main-region')).not.toHaveAttribute('inert');
+  });
+
+  it('keeps the docked rail out of modal semantics', () => {
+    seedStore();
+    renderLayout(true);
+
+    const rail = screen.getByTestId('right-rail');
+    expect(rail).not.toHaveAttribute('role', 'dialog');
+    expect(screen.queryByTestId('rail-scrim')).not.toBeInTheDocument();
+    expect(screen.getByTestId('main-region')).not.toHaveAttribute('inert');
+  });
+
   it('mirrors prefers-reduced-motion into the store', () => {
     seedStore();
     window.matchMedia = (query: string) => ({

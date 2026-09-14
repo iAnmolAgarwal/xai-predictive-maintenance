@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Outlet } from 'react-router';
 import { RAIL_BREAKPOINT_PX } from '@/config';
 import { useMediaQuery } from '@/lib/useMediaQuery';
 import { useStore } from '@/store';
+import { ConnectionBanner } from './ConnectionBanner';
 import { LiveRegions } from './LiveRegions';
 import { RightRail } from './RightRail';
 import { TopBar } from './TopBar';
@@ -24,6 +25,7 @@ export function AppLayout() {
   const toggleRail = useStore((state) => state.toggleRail);
   const markAlertsSeen = useStore((state) => state.markAlertsSeen);
   const setReducedMotion = useStore((state) => state.setReducedMotion);
+  const railToggleRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     setReducedMotion(prefersReducedMotion);
@@ -36,6 +38,7 @@ export function AppLayout() {
 
   const overlay = !wideEnoughForRail;
   const showRail = overlay ? railOpen : true;
+  const modalOpen = overlay && railOpen;
 
   return (
     <div
@@ -45,18 +48,35 @@ export function AppLayout() {
       data-testid="app-shell"
       data-rail={overlay ? 'overlay' : 'docked'}
     >
+      <a className={styles.skipLink} href="#main-region">
+        Skip to main content
+      </a>
       <TopBar
         railCollapsed={overlay}
+        railToggleRef={railToggleRef}
         onToggleRail={() => {
           if (!railOpen) markAlertsSeen();
           toggleRail();
         }}
       />
-      <main className={styles.main} data-testid="main-region" id="main-region">
+      {/* `inert` keeps the hidden grid out of the tab order and the a11y tree
+          while the drawer is open. */}
+      <main
+        className={styles.main}
+        data-testid="main-region"
+        id="main-region"
+        inert={modalOpen}
+      >
+        <ConnectionBanner />
         <Outlet />
       </main>
       {showRail ? (
-        <RightRail overlay={overlay} open={railOpen} onClose={() => setRailOpen(false)} />
+        <RightRail
+          overlay={overlay}
+          open={railOpen}
+          onClose={() => setRailOpen(false)}
+          returnFocusRef={railToggleRef}
+        />
       ) : null}
       <LiveRegions />
     </div>

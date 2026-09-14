@@ -47,7 +47,7 @@
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  font-size: var(--t-xs);
+  font-size: var(--t-label);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--c-text-muted);
@@ -61,4 +61,30 @@
 .body {
   min-height: 0;
   overflow-y: auto;
+}
+
+.scrim {
+  position: fixed;
+  inset: var(--topbar-h) 0 0 0;
+  z-index: 25;
+  border: none;
+  padding: 0;
+  background: rgb(10 12 16 / 0.6);
+  cursor: pointer;
+  animation: fade-in var(--dur-base) var(--ease-out);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrim {
+    animation: none;
+  }
 }

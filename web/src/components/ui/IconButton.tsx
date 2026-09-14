@@ -6,7 +6,7 @@ export type IconButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'chi
   label: string;
   glyph: ReactNode;
   /** React 19 passes `ref` as a plain prop; the rail focuses its close button. */
-  ref?: Ref<HTMLButtonElement>;
+  ref?: Ref<HTMLButtonElement> | undefined;
 };
 
 export function IconButton({ label, glyph, className, ...rest }: IconButtonProps) {

@@ -1,9 +1,11 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import styles from './ui.module.css';
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: 'default' | 'ghost' | 'primary';
   children: ReactNode;
+  /** React 19 passes `ref` as a plain prop; the rail drawer focuses its opener. */
+  ref?: Ref<HTMLButtonElement> | undefined;
 };
 
 /** A real `<button>`. Every interactive surface in the app is one of these. */

@@ -20,6 +20,22 @@
   grid-area: topbar;
 }
 
+.skipLink {
+  position: absolute;
+  left: var(--s-3);
+  top: -100px;
+  z-index: 60;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-3);
+  color: var(--c-text);
+  font-size: var(--t-sm);
+}
+
+.skipLink:focus-visible {
+  top: var(--s-2);
+}
+
 .main {
   grid-area: main;
   min-width: 0;
