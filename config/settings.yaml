@@ -1,0 +1,140 @@
+# XPM settings — the single source of every threshold, window, percentile,
+# top-k and speed multiplier in the system (backend.md §3.6). No business
+# module may carry a numeric literal a user could plausibly want to change.
+#
+# Any leaf can be overridden from the environment with the XPM_ prefix and "__"
+# as the nested delimiter, e.g.
+#   XPM_ALERTING__PROBABILITY_THRESHOLD=0.7
+#   XPM_REPLAY__SPEED=5
+# Env vars beat this file. `config/settings.example.yaml` documents the
+# alternatives for each key.
+
+schema_version: 1              # payload/config schema generation; bumped with the wire format
+
+paths:
+  data_dir: data               # data/raw (git-ignored) + data/processed (committed)
+  db_path: data/xpm.db         # SQLite file, WAL mode
+  models_dir: models/registry  # versioned model artefacts; `current` is a symlink
+  reports_dir: reports         # machine-generated metrics.json and friends
+
+mqtt:
+  host: mosquitto              # "localhost" outside compose
+  port: 1883                   # anonymous TCP listener (9001 is the websockets listener)
+  keepalive_seconds: 30        # paho keepalive
+  topic_root: xpm              # first segment of every topic: xpm/{plant}/{machine}/...
+  reconnect_min_seconds: 1.0   # first reconnect backoff step
+  reconnect_max_seconds: 30.0  # backoff ceiling
+
+plants:
+  default: ai4i                # the plant the dashboard opens on
+  ai4i:
+    enabled: true              # false hides the plant from GET /api/plants
+    machine_count: 12          # round-robin over 10000 rows -> 833/834 rows each
+    row_interval_seconds: 300  # one row = 5 min of dataset time
+    dataset_start: "2026-01-01T00:00:00Z"  # fixed so timestamps are reproducible
+    demo_machine_id: ai4i-03   # plant-floor deep link for the README GIF (R13)
+  ims:
+    enabled: true              # false hides the plant from GET /api/plants
+    test_set: 2                # NASA IMS test set 2: 4 bearings, 984 files
+    machine_count: 4           # one machine per bearing
+    row_interval_seconds: 600  # one file = 10 min of dataset time
+    sample_rate_hz: 20000      # raw acquisition rate of the IMS accelerometers
+    samples_per_file: 20480    # 1.024 s of vibration per file
+    label_horizon_hours: 24    # last N hours of a failing bearing = failure_imminent (ADR-023)
+    welch_nperseg: 4096        # Welch segment length for the band energies
+    welch_overlap: 0.5         # 50 % segment overlap
+    demo_machine_id: ims-01    # bearing 1 — the one that actually fails (R13)
+    source_url: "https://phm-datasets.s3.amazonaws.com/NASA/4.+Bearings.zip"  # the one verified mirror
+    source_sha256: "21001ac266c465f5d345ec42d7b508c6a6328487fd9d4d7774422dd5ea10ad83"  # verified before extraction
+    source_bytes: 1075597174   # expected archive size, for the resumable fetch
+
+features:
+  windows_hours: [1, 4, 24]    # rolling windows, in dataset time
+  stats: [mean, std, min, max, p95, slope, ewma]  # per channel per window
+  ewma_halflife_hours: 1.0     # per-window halflife = window_hours/4, floored here
+  slope_unit: per_hour         # slope is reported in channel units per hour
+  slope_relative_when_mean_nonzero: true  # render as %/h when |mean| > slope_zero_eps
+  slope_zero_eps: 1.0e-12      # below this the relative slope framing is unsafe
+  min_window_coverage: 0.6     # <60 % of expected samples in a window -> feature is null
+  percentile_levels: [50, 75, 90, 95, 99]  # percentiles tracked per (machine, feature)
+  percentile_warmup_samples: 48  # below this the percentile is null, never 0
+  percentile_algorithm: tdigest  # streaming percentile estimator
+  percentile_compression: 200    # t-digest compression parameter
+  streak_percentile: 95        # "consecutive hours above its Nth percentile"
+  streak_min_hours: 1.0        # below this the consecutive framing is not used
+
+model:
+  served: lgbm                 # the served model; "rf" exists only for the comparison view
+  seed: 42                     # fixed seed everywhere, so training is reproducible
+  test_size: 0.2               # hold-out fraction
+  split: grouped_time          # group by machine, split by dataset_ts, no leakage
+  # NOTE: there is deliberately no `calibration` key. No post-hoc calibrator exists
+  # in this system; class imbalance is handled by class_weight / scale_pos_weight
+  # inside the fit, so one probability reaches the screen (R16, ADR-016).
+  shap:
+    background_rows: 256       # TreeExplainer interventional background size (R3)
+    background_seed: 1337      # background sample seed, so SHAP is reproducible
+    feature_perturbation: interventional  # exact interventional values, not tree_path_dependent
+    model_output: probability  # waterfall bars sum to the probability on screen (R3)
+  lgbm:
+    n_estimators: 400          # boosting rounds
+    learning_rate: 0.05        # shrinkage
+    num_leaves: 31             # tree capacity
+    min_child_samples: 20      # minimum samples per leaf
+    subsample: 0.9             # row subsampling per iteration
+    colsample_bytree: 0.8      # column subsampling per tree
+    class_weight: balanced     # handles imbalance in-fit instead of calibrating after (R16)
+  rf:
+    n_estimators: 500          # forest size
+    max_depth: 12              # depth cap
+    min_samples_leaf: 5        # minimum samples per leaf
+    class_weight: balanced_subsample  # in-fit imbalance handling
+  evaluation:
+    target_precision: 0.80     # report recall at this precision
+    calibration_bins: 10       # reliability-curve bins for the EVALUATION.md diagnostic only
+
+alerting:
+  probability_threshold: 0.60  # >= this -> alert
+  watch_threshold: 0.35        # >= this and < threshold -> watch
+  consecutive_rows_to_open: 2  # debounce: rows over threshold before an alert opens
+  consecutive_rows_to_close: 3 # rows below watch_threshold before the alert closes
+  cooldown_minutes: 60         # dataset time; no second alert for a machine within this
+  severity_bands:              # lower bound -> severity
+    medium: 0.60               # [0.60, 0.75) -> medium
+    high: 0.75                 # [0.75, 0.90) -> high
+    critical: 0.90             # >= 0.90 -> critical
+
+explanation:
+  top_k: 8                     # contributions returned and drawn in the waterfall
+  top_k_preview: 3             # features embedded in RiskMessage / RiskUpdate
+  top_k_whatif: 5              # sliders offered in the what-if panel
+  max_sentence_features: 2     # how many features the composed sentence names
+  min_abs_shap: 0.001          # below this a contribution folds into `other`
+  caveat: >
+    SHAP attributions describe how this model arrived at this score. They are
+    associations learned from historical data, not proof of physical cause.
+
+replay:
+  seed: 42                     # deterministic row ordering and run ids (R5)
+  base_rate_hz: 2.0            # ticks per second at 1x; one tick = one row per machine
+  speed: 1.0                   # starting multiplier; changed via POST /api/replay/command only
+  allowed_speeds: [0.5, 1.0, 5.0, 20.0]  # CONTRACT: mirrored by ReplayCommand.speed (§3.3)
+  autostart: true              # begin publishing as soon as the container is up
+  loop: true                   # restart from dataset_start on exhaustion; increments run_id (R12)
+  publish_batch: 12            # machines published per tick
+
+api:
+  host: 0.0.0.0                # bind address inside the container
+  port: 8000                   # uvicorn port
+  cors_origins: ["http://localhost:5173", "http://localhost:4173"]  # Vite dev and preview
+  ws_flush_ms: 100             # telemetry/risk coalescing window, also the render budget
+  ws_queue_max: 512            # per-connection queue; overflow drops oldest telemetry/risk
+  ws_ping_seconds: 10          # server heartbeat interval, regardless of replay state (R11)
+  offline_after_seconds: 30    # no telemetry for this long -> status "offline"
+  sparkline_points: 60         # MachineSummary.risk_sparkline ring length
+  max_series_points: 2000      # server-side LTTB downsample above this
+  history_retention_rows: 500000  # rows kept per table before pruning
+
+logging:
+  level: INFO                  # DEBUG | INFO | WARNING | ERROR | CRITICAL
+  json: true                   # structlog JSON renderer; false gives a console renderer
