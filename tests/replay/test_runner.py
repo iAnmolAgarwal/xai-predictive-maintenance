@@ -72,6 +72,7 @@ class ScriptedBroker:
         self.messages_published: list[PublishedMessage] = []
         self.connections = 0
         self.live_connections = 0
+        self.published_before_failure = 0
         self.commands: list[bytes] = []
 
     def __call__(self, identifier: str) -> Any:
@@ -106,6 +107,7 @@ class _Connection:
         limit = self._broker.fail_publish_after
         # Only the first connection that actually came up dies mid-stream.
         if limit is not None and self._ordinal == 1 and self._published_here >= limit:
+            self._broker.published_before_failure = len(self._broker.messages_published)
             raise aiomqtt.MqttError("broker went away mid-publish")
         self._published_here += 1
         self._broker.messages_published.append(PublishedMessage(topic, payload, qos, retain))
@@ -206,6 +208,13 @@ async def test_a_mid_publish_failure_reconnects_and_keeps_the_same_run() -> None
     }
     assert run_ids == {publisher.run_id}
     assert publisher.stopped is True
+
+    # Recovery story: run() re-publishes the retained state on re-entry, so the
+    # first thing a reconnected subscriber sees is the truth about the run.
+    first_after_reconnect = broker.messages_published[broker.published_before_failure]
+    assert first_after_reconnect.topic == "xpm/control/replay/state"
+    assert (first_after_reconnect.qos, first_after_reconnect.retain) == (1, True)
+    assert first_after_reconnect.json["run_id"] == publisher.run_id
 
 
 async def test_the_backoff_grows_exponentially_and_is_capped() -> None:
@@ -444,3 +453,85 @@ def test_main_loads_settings_configures_logging_and_serves(
     runner.main()
     assert len(served) == 1
     assert configured == served
+
+
+# -- pacing across an outage (review 2, blocking 1) ------------------------- #
+
+
+async def test_an_outage_is_not_replayed_as_a_catch_up_burst() -> None:
+    """Backoff time is wall time, not tick debt.
+
+    Without the rebase in ``serve()`` every tick after a reconnect fires with a
+    zero wait, dumping the whole backlog into the ingestion path as fast as the
+    loop drains it. The publisher must simply resume its pacing.
+    """
+    attempts = 8
+    settings = runner_settings()
+    broker = ScriptedBroker(fail_connects=attempts)
+    time = VirtualTimeSource()
+    publisher = await serve(
+        settings,
+        client_factory=broker,
+        schedule_factory=schedule_factory(settings),
+        time_source=time,
+    )
+    seconds_per_tick = publisher.clock.seconds_per_tick
+    assert seconds_per_tick == pytest.approx(1.0 / settings.replay.base_rate_hz)
+
+    minimum = settings.mqtt.reconnect_min_seconds
+    last_backoff = max(index for index, seconds in enumerate(time.sleeps) if seconds >= minimum)
+    tick_sleeps = time.sleeps[last_backoff + 1 :]
+    assert len(tick_sleeps) == TICKS
+    # The first tick after the rebase is due immediately; every later one waits
+    # a full interval. Before the fix this list was TICKS zeroes.
+    assert tick_sleeps[0] == 0.0
+    assert tick_sleeps[1:] == pytest.approx([seconds_per_tick] * (TICKS - 1))
+    assert tick_sleeps.count(0.0) == 1
+
+
+async def test_the_rebase_leaves_dataset_time_and_seq_untouched() -> None:
+    """R5 survives a reconnect: the same rows at the same dataset instants."""
+    settings = runner_settings()
+    interrupted = ScriptedBroker(fail_connects=4)
+    clean = ScriptedBroker()
+    for broker in (interrupted, clean):
+        await serve(
+            settings,
+            client_factory=broker,
+            schedule_factory=schedule_factory(settings),
+            time_source=VirtualTimeSource(),
+        )
+
+    def stream(broker: ScriptedBroker) -> list[tuple[str, str, int]]:
+        return [
+            (
+                message.json["machine_id"],
+                message.json["dataset_ts"],
+                message.json["seq"],
+            )
+            for message in broker.messages_published
+            if message.topic.endswith("/telemetry")
+        ]
+
+    assert stream(interrupted) == stream(clean)
+    assert len(stream(clean)) == TICKS * MACHINES
+
+
+async def test_the_first_dropped_publish_after_an_unbind_is_logged_once() -> None:
+    """A silent loss must be visible when it happens, not only at shutdown."""
+    # The proxy is module-private on purpose; its drop behaviour is not.
+    proxy = runner._ClientProxy()
+    with structlog.testing.capture_logs() as logs:
+        await proxy.publish("xpm/ai4i/ai4i-01/telemetry", b"{}", 0, False)
+        await proxy.publish("xpm/ai4i/ai4i-02/telemetry", b"{}", 0, False)
+    dropped = [entry for entry in logs if entry["event"] == "replay.publish_dropped"]
+    assert len(dropped) == 1
+    assert dropped[0]["log_level"] == "warning"
+    assert proxy.dropped == 2
+
+    proxy.bind(FakeMqttClient())
+    proxy.unbind()
+    with structlog.testing.capture_logs() as logs:
+        await proxy.publish("xpm/control/replay/state", b"{}", 1, True)
+    assert [entry["event"] for entry in logs] == ["replay.publish_dropped"]
+    assert proxy.dropped == 3

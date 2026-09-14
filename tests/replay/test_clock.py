@@ -179,6 +179,44 @@ def test_reset_rewinds_to_the_first_tick_and_keeps_speed_and_play_state() -> Non
     assert clock.playing is True
 
 
+def test_rebase_moves_the_wall_clock_phase_and_nothing_else() -> None:
+    """R5: a rebase is a wall-clock operation; dataset time must not notice."""
+    clock, time = make_clock(speed=20.0)
+    for _ in range(4):
+        clock.advance()
+    dataset_ts = clock.dataset_ts
+    tick = clock.tick
+
+    time.now += 57.0  # an outage: wall time passed while nobody was ticking
+    assert clock.wait_seconds() == 0.0  # the whole outage reads as tick debt
+
+    clock.rebase()
+    assert clock.wait_seconds() == 0.0  # the current tick is due immediately
+    clock.advance()
+    assert clock.wait_seconds() == pytest.approx(clock.seconds_per_tick)
+    assert clock.tick == tick + 1
+    assert clock.dataset_ts == dataset_ts + ROW_INTERVAL
+    assert clock.speed == 20.0
+    assert clock.playing is True
+
+
+def test_rebase_does_not_replay_an_outage_as_overdue_ticks() -> None:
+    """The burst this exists to prevent, stated as an assertion."""
+    clock, time = make_clock()
+    outage = 57.0
+    time.now += outage
+    without_rebase = [clock.wait_seconds() for _ in range(3)]
+    assert without_rebase == [0.0, 0.0, 0.0]  # every tick overdue
+
+    clock.rebase()
+    waits: list[float] = []
+    for _ in range(3):
+        waits.append(clock.wait_seconds())
+        time.now += clock.wait_seconds()
+        clock.advance()
+    assert waits == pytest.approx([0.0, clock.seconds_per_tick, clock.seconds_per_tick])
+
+
 def test_exhausted_becomes_true_only_after_the_last_tick() -> None:
     clock, _ = make_clock(tick_count=3)
     for _ in range(3):
