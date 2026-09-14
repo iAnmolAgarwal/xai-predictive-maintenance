@@ -1,0 +1,84 @@
+{
+  "columns": [
+    "machine_id",
+    "dataset_ts",
+    "vibration_0k5khz",
+    "vibration_1khz",
+    "vibration_2khz",
+    "vibration_3khz",
+    "vibration_5khz",
+    "vibration_8khz",
+    "vibration_rms",
+    "vibration_kurtosis",
+    "vibration_crest",
+    "failure_imminent",
+    "bearing",
+    "source_file"
+  ],
+  "machines": [
+    "ims-01",
+    "ims-02",
+    "ims-03",
+    "ims-04"
+  ],
+  "parameters": {
+    "band_edges_hz": {
+      "vibration_0k5khz": [
+        0.0,
+        500.0
+      ],
+      "vibration_1khz": [
+        500.0,
+        1500.0
+      ],
+      "vibration_2khz": [
+        1500.0,
+        2500.0
+      ],
+      "vibration_3khz": [
+        2500.0,
+        3500.0
+      ],
+      "vibration_5khz": [
+        3500.0,
+        6000.0
+      ],
+      "vibration_8khz": [
+        6000.0,
+        10000.0
+      ]
+    },
+    "band_value": "band-mean PSD in g^2/Hz (integral over band / band width)",
+    "channels": [
+      "vibration_0k5khz",
+      "vibration_1khz",
+      "vibration_2khz",
+      "vibration_3khz",
+      "vibration_5khz",
+      "vibration_8khz",
+      "vibration_rms",
+      "vibration_kurtosis",
+      "vibration_crest"
+    ],
+    "failing_bearings": [
+      1
+    ],
+    "label_horizon_hours": 24.0,
+    "label_window": "half-open (end - N, end]",
+    "sample_rate_hz": 20000.0,
+    "samples_per_snapshot": 20480,
+    "test_set": "2nd_test",
+    "welch": {
+      "nperseg": 4096,
+      "overlap": 0.5,
+      "window": "hann"
+    }
+  },
+  "parquet_bytes": 336409,
+  "parquet_file": "test2.parquet",
+  "parquet_sha256": "fd6ea379ce29e5782975eaf10f1f89ef8959c3e89fb723c3ad3bec31f0a62f73",
+  "plant": "ims",
+  "rows": 3936,
+  "source_sha256": "21001ac266c465f5d345ec42d7b508c6a6328487fd9d4d7774422dd5ea10ad83",
+  "source_url": "https://phm-datasets.s3.amazonaws.com/NASA/4.+Bearings.zip"
+}
