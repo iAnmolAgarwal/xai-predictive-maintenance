@@ -111,19 +111,16 @@ def download(
         return dest
 
     part = dest.with_name(dest.name + ".part")
-    delays = backoff_delays(attempts, base_delay)
     factory = client_factory or (lambda: httpx.Client(timeout=HTTP_TIMEOUT_SECONDS))
-
-    for index in range(attempts):
-        try:
-            _fetch_once(url, part, factory, chunk_bytes)
-            break
-        except (httpx.HTTPError, OSError) as exc:  # network/transport level only
-            if index == attempts - 1:
-                raise DownloadError(f"giving up on {url} after {attempts} attempts") from exc
-            sleep(delays[index])
-    else:  # pragma: no cover - the loop always breaks or raises
-        raise AssertionError("unreachable")
+    _fetch_with_retries(
+        url,
+        part,
+        factory,
+        chunk_bytes,
+        attempts=attempts,
+        delays=backoff_delays(attempts, base_delay),
+        sleep=sleep,
+    )
 
     if expected_sha256 is not None:
         actual = sha256_file(part)
@@ -135,6 +132,33 @@ def download(
 
     part.replace(dest)
     return dest
+
+
+def _fetch_with_retries(
+    url: str,
+    part: Path,
+    client_factory: Callable[[], httpx.Client],
+    chunk_bytes: int,
+    *,
+    attempts: int,
+    delays: list[float],
+    sleep: Callable[[float], None],
+) -> None:
+    """Retry :func:`_fetch_once` on transport errors, sleeping between attempts.
+
+    The last failure is re-raised as :class:`DownloadError` with the original
+    transport error attached, so the caller sees why the archive never landed.
+    """
+    last_error: Exception | None = None
+    for index in range(attempts):
+        try:
+            _fetch_once(url, part, client_factory, chunk_bytes)
+            return
+        except (httpx.HTTPError, OSError) as exc:  # network/transport level only
+            last_error = exc
+            if index < attempts - 1:
+                sleep(delays[index])
+    raise DownloadError(f"giving up on {url} after {attempts} attempts") from last_error
 
 
 def _fetch_once(

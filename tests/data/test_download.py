@@ -147,7 +147,7 @@ def test_exhausted_retries_raise_download_error(tmp_path: Path) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("always down", request=request)
 
-    with pytest.raises(download.DownloadError, match="after 3 attempts"):
+    with pytest.raises(download.DownloadError, match="after 3 attempts") as excinfo:
         download.download(
             URL,
             tmp_path / "bearings.zip",
@@ -156,6 +156,20 @@ def test_exhausted_retries_raise_download_error(tmp_path: Path) -> None:
             attempts=3,
             sleep=lambda _: None,
         )
+    assert isinstance(excinfo.value.__cause__, httpx.ConnectError)
+
+
+def test_download_without_an_expected_checksum_skips_verification(tmp_path: Path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b"unverified payload")
+
+    dest = tmp_path / "ai4i2020.zip"
+    result = download.download(
+        URL,
+        dest,
+        client_factory=_factory(httpx.MockTransport(handler)),  # type: ignore[arg-type]
+    )
+    assert result.read_bytes() == b"unverified payload"
 
 
 def test_checksum_mismatch_deletes_the_file_and_raises(tmp_path: Path) -> None:
