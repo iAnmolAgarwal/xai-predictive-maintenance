@@ -1,0 +1,36 @@
+.shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--rail-w);
+  grid-template-rows: var(--topbar-h) minmax(0, 1fr);
+  grid-template-areas:
+    'topbar topbar'
+    'main rail';
+  height: 100%;
+  background: var(--c-bg);
+}
+
+.shellNarrow {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'topbar'
+    'main';
+}
+
+.shell > header {
+  grid-area: topbar;
+}
+
+.main {
+  grid-area: main;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.shell > aside {
+  grid-area: rail;
+}
+
+.shellNarrow > aside {
+  grid-area: auto;
+}

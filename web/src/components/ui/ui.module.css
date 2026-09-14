@@ -1,0 +1,238 @@
+/* Shared primitives. Every value comes from tokens.css. */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: 32px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-2);
+  color: var(--c-text);
+  font-size: var(--t-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition:
+    background var(--dur-instant) var(--ease-out),
+    border-color var(--dur-instant) var(--ease-out);
+}
+
+.button:hover:not(:disabled) {
+  background: var(--c-surface-3);
+  border-color: var(--c-border-strong);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.buttonGhost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.buttonGhost:hover:not(:disabled) {
+  background: var(--c-surface-2);
+}
+
+.buttonPrimary {
+  background: var(--c-surface-3);
+  border-color: var(--c-border-strong);
+}
+
+.iconButton {
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+}
+
+.selectWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.select {
+  appearance: none;
+  min-height: 32px;
+  padding: 0 var(--s-5) 0 var(--s-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-2);
+  color: var(--c-text);
+  font-size: var(--t-sm);
+  cursor: pointer;
+}
+
+.selectChevron {
+  position: absolute;
+  right: var(--s-2);
+  pointer-events: none;
+  color: var(--c-text-muted);
+  font-size: var(--t-xs);
+}
+
+.sliderRow {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.slider {
+  width: 100%;
+  accent-color: var(--c-series-1);
+  cursor: pointer;
+}
+
+.sliderLabel {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--t-xs);
+  color: var(--c-text-muted);
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 40;
+  max-width: 320px;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-2);
+  box-shadow: var(--shadow-2);
+  color: var(--c-text);
+  font-size: var(--t-sm);
+  pointer-events: none;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 2px var(--s-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface-2);
+  font-size: var(--t-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--c-text);
+}
+
+.badgeHealthy {
+  border-color: var(--c-healthy-dim);
+  color: var(--c-healthy);
+}
+
+.badgeWatch {
+  border-color: var(--c-watch-dim);
+  color: var(--c-watch);
+}
+
+.badgeDanger {
+  border-color: var(--c-danger-dim);
+  color: var(--c-danger);
+}
+
+.badgeOffline {
+  border-color: var(--c-offline-dim);
+  color: var(--c-offline);
+}
+
+.badgeCount {
+  min-width: 18px;
+  padding: 0 5px;
+  justify-content: center;
+  background: var(--c-danger);
+  border-color: var(--c-danger);
+  color: var(--c-bg);
+  letter-spacing: 0;
+}
+
+.skeleton {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--c-surface-1) 0%,
+    var(--c-surface-2) 50%,
+    var(--c-surface-1) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+.state {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--s-2);
+  padding: var(--s-5);
+  text-align: center;
+  color: var(--c-text-muted);
+}
+
+.stateGlyph {
+  font-size: var(--t-lg);
+  color: var(--c-text-faint);
+}
+
+.stateTitle {
+  font-size: var(--t-md);
+  font-weight: var(--fw-medium);
+  color: var(--c-text);
+}
+
+.stateBody {
+  font-size: var(--t-sm);
+  max-width: 44ch;
+}
+
+.stateError .stateGlyph {
+  color: var(--c-danger);
+}
+
+.sparkline {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ring {
+  display: block;
+}
+
+.ringTrack {
+  stroke: var(--c-border);
+}
+
+.ringValue {
+  transition: stroke-dashoffset var(--dur-slow) var(--ease-out);
+}
+
+.ringLabel {
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  fill: var(--c-text);
+}
