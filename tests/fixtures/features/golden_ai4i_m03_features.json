@@ -1,5 +1,5 @@
 {
-  "description": "Generated once by T-FEATURES from xpm.features.offline.build_vectors over the committed processed parquet. Both the offline and the online engine are asserted against it.",
+  "description": "Generated from xpm.features.offline.build_vectors over the committed processed parquet. Regenerate with `XPM_REGENERATE_GOLDENS=1 uv run pytest tests/features -k golden`, which rewrites this file from tests/features/test_online_offline_parity.py::_golden_payload.",
   "feature_names_sha256": "86fef57711959fa91bbfc77de656d8903f8f39eafa08677b09d5729706126e4f",
   "machine_id": "ai4i-03",
   "n_features": 154,
