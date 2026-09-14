@@ -210,7 +210,15 @@ class FeaturesSettings(SettingsSection):
             "configs written before that measurement."
         ),
     )
-    percentile_compression: int = Field(ge=1)
+    percentile_compression: int = Field(
+        ge=1,
+        description=(
+            "Rows the per-machine history matrix is allocated and grown by. "
+            "The name is the t-digest one it was written for; with the "
+            "exact-rank backend (R22) it governs allocation granularity, not "
+            "accuracy."
+        ),
+    )
     streak_percentile: Percentile
     streak_min_hours: float = Field(ge=0.0)
 
