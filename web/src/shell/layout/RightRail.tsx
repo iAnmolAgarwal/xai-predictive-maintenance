@@ -29,7 +29,7 @@ export function RightRail({
   const unseenCount = useStore((state) => state.alerts.unseenCount);
   const markAlertsSeen = useStore((state) => state.markAlertsSeen);
   const closeRef = useRef<HTMLButtonElement | null>(null);
-  const railRef = useRef<HTMLElement | null>(null);
+  const railRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!overlay || !open) return;
@@ -67,6 +67,10 @@ export function RightRail({
 
   if (overlay && !open) return null;
 
+  // `aside` carries an implicit complementary role, which cannot be overridden
+  // with `dialog`; the overlay is a dialog, the docked column is a complement.
+  const Region = (overlay ? 'div' : 'aside') as 'div';
+
   return (
     <>
       {overlay ? (
@@ -82,7 +86,7 @@ export function RightRail({
           onClick={onClose}
         />
       ) : null}
-      <aside
+      <Region
         ref={railRef}
         id="right-rail"
         className={[styles.rail, overlay ? styles.overlay : ''].filter(Boolean).join(' ')}
@@ -116,7 +120,7 @@ export function RightRail({
         <div className={styles.body}>
           <Slot name="rail.feed" />
         </div>
-      </aside>
+      </Region>
     </>
   );
 }
