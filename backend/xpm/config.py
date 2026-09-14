@@ -65,9 +65,7 @@ def resolve_path(value: Path | str) -> Path:
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Load, validate and cache the settings tree."""
-    # Every field is supplied by the YAML and environment sources, which mypy
-    # cannot see without the Pydantic plugin.
-    return Settings()  # type: ignore[call-arg]
+    return Settings()
 
 
 def reload_settings() -> Settings:

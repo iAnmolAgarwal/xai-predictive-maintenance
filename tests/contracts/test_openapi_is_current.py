@@ -143,6 +143,22 @@ def test_errors_use_the_problem_media_type(document: dict[str, Any]) -> None:
     assert "application/problem+json" in immutable["content"]
 
 
+def test_two_clocks_are_iso_strings_in_the_schema(document: dict[str, Any]) -> None:
+    alert = document["components"]["schemas"]["Alert"]["properties"]
+    for field in ("ts", "dataset_ts"):
+        assert alert[field]["type"] == "string"
+        assert alert[field]["format"] == "date-time"
+    closed = alert["closed_dataset_ts"]["anyOf"]
+    assert {"format": "date-time", "type": "string"} in closed
+    assert {"type": "null"} in closed
+
+
+def test_shap_space_is_a_closed_literal(document: dict[str, Any]) -> None:
+    for schema_name in ("Explanation", "WhatIfResponse"):
+        prop = document["components"]["schemas"][schema_name]["properties"]["shap_space"]
+        assert prop["const"] == "probability"
+
+
 def test_no_error_response_is_plain_json(document: dict[str, Any]) -> None:
     """backend.md §3.4 grants no carve-out: every 4xx/5xx body is a problem.
 

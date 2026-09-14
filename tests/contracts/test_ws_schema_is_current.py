@@ -138,3 +138,17 @@ def test_canonical_channel_order_is_pinned() -> None:
 def test_clocks_are_date_time_strings(document: dict[str, Any]) -> None:
     ping = document["$defs"]["PingFrame"]["properties"]["ts"]
     assert ping == {"format": "date-time", "type": "string"}
+
+
+def test_every_frame_field_is_required(document: dict[str, Any]) -> None:
+    """No optional keys on the wire: absent data is an explicit ``null``.
+
+    ``json-schema-to-typescript`` turns an unrequired property into ``field?:``,
+    which lets the dashboard silently read ``undefined`` where the protocol
+    promises a value. Nullability is expressed in the type, never by omission.
+    """
+    for name, definition in document["$defs"].items():
+        properties = definition.get("properties")
+        if properties is None:
+            continue
+        assert set(properties) == set(definition.get("required", [])), name
