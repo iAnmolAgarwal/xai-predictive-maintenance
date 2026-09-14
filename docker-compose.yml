@@ -12,6 +12,9 @@ name: xpm
 
 x-xpm-runtime: &xpm-runtime
   restart: unless-stopped
+  # Nothing in this stack ever needs to gain privileges via setuid binaries.
+  security_opt:
+    - no-new-privileges:true
   environment: &xpm-env
     XPM_MQTT__HOST: mosquitto
     XPM_MQTT__PORT: "1883"
@@ -31,6 +34,8 @@ services:
     image: eclipse-mosquitto:2.0.22
     container_name: xpm-mosquitto
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     # Loopback-only publication: reachable from the compose network and from a
     # developer running the backend outside compose, from nowhere else.
     ports:
@@ -38,7 +43,6 @@ services:
       - "127.0.0.1:9001:9001"
     volumes:
       - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-      - mosquitto-data:/mosquitto/data
     healthcheck:
       # mosquitto_sub ships in the image; a successful -E subscribe proves the
       # broker accepted a connection on the MQTT listener.
@@ -65,8 +69,15 @@ services:
       - ./data:/app/data:ro
       - ./models:/app/models:ro
       - api-state:/app/var
+    # The image carries everything it needs; only the SQLite volume and /tmp
+    # are writable. PYTHONDONTWRITEBYTECODE is set in the image, so a
+    # read-only /app/.venv cannot break interpreter start-up.
+    read_only: true
+    tmpfs:
+      - /tmp
+    # Unauthenticated, state-mutating API: never published off the host.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       mosquitto:
         condition: service_healthy
@@ -91,6 +102,10 @@ services:
       dockerfile: docker/replay.Dockerfile
     image: ${XPM_IMAGE_PREFIX:-ghcr.io/ianmolagarwal}/xpm-replay:${XPM_IMAGE_TAG:-latest}
     container_name: xpm-replay
+    # The publisher only reads; it has no writable path outside /tmp.
+    read_only: true
+    tmpfs:
+      - /tmp
     depends_on:
       mosquitto:
         condition: service_healthy
@@ -118,8 +133,10 @@ services:
     image: ${XPM_IMAGE_PREFIX:-ghcr.io/ianmolagarwal}/xpm-web:${XPM_IMAGE_TAG:-latest}
     container_name: xpm-web
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     ports:
-      - "5173:80"
+      - "127.0.0.1:5173:80"
     depends_on:
       api:
         condition: service_healthy
@@ -137,6 +154,8 @@ services:
     image: ${XPM_IMAGE_PREFIX:-ghcr.io/ianmolagarwal}/xpm-nodered:${XPM_IMAGE_TAG:-latest}
     container_name: xpm-nodered
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
       TZ: UTC
     volumes:
@@ -144,8 +163,9 @@ services:
       # Read-only source of the committed flow; seeded into /data on first
       # start by the image entrypoint, never written back.
       - ./nodered:/flows:ro
+    # The Node-RED editor has no adminAuth: loopback only.
     ports:
-      - "1880:1880"
+      - "127.0.0.1:1880:1880"
     depends_on:
       mosquitto:
         condition: service_healthy
@@ -157,6 +177,5 @@ services:
       start_period: 30s
 
 volumes:
-  mosquitto-data:
   api-state:
   nodered-data:
