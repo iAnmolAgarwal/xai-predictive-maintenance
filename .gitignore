@@ -1,0 +1,60 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+*.ipynb_checkpoints
+
+# --- Node ---
+node_modules/
+web/dist/
+web/coverage/
+web/playwright-report/
+web/test-results/
+*.tsbuildinfo
+.eslintcache
+
+# --- Data & models (never commit) ---
+data/raw/
+data/processed/
+data/*.csv
+data/*.parquet
+data/*.zip
+data/*.rar
+data/*.7z
+*.pkl
+*.joblib
+*.onnx
+*.h5
+!models/registry/**/*.json
+
+# --- Env / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Docker / runtime ---
+volumes/
+*.db
+*.db-journal
+mosquitto/data/
+mosquitto/log/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# --- Claude local ---
+.claude/settings.local.json
