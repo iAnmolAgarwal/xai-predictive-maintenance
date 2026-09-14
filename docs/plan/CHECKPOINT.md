@@ -1,14 +1,15 @@
 # Orchestrator checkpoint (auto-maintained; read this first after /compact)
 
-Updated: 2026-09-14 22:50 IST
+Updated: 2026-09-14 23:40 IST
 
 ## Where we are
 - Phase 1 (plan) DONE. Phase 2 (infra, data, contracts) DONE and merged into main.
-- `main` is green (ruff, mypy --strict, 325 tests, contracts-check) and pushed
-  at 352e88b.
-- Phase 3 in progress, one worktree each under the session scratchpad
-  (`git worktree list` shows them): feat/features (T-FEATURES),
-  feat/replay (T-REPLAY), feat/web-shell (T-WEB-SHELL).
+- `main` is green (ruff, mypy --strict, 443 tests, contracts-check) and pushed
+  at 3de4012 (T-FEATURES merged).
+- In flight (worktrees under the session scratchpad, `git worktree list`):
+  feat/replay (T-REPLAY, review 3 pending after two fix passes),
+  feat/web-shell (T-WEB-SHELL, still building), feat/model (T-MODEL, Phase 4
+  started early since it only needs features), fix/features-settings (R22).
 
 ## Loop for every branch (unchanged)
 builder -> code-reviewer (+ security-reviewer for api/infra, + ux-reviewer for
