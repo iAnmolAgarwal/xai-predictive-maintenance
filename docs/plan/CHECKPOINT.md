@@ -4,10 +4,11 @@ Updated: 2026-09-14 23:40 IST
 
 ## Where we are
 - Phase 1 (plan) DONE. Phase 2 (infra, data, contracts) DONE and merged into main.
-- `main` is green (ruff, mypy --strict, 443 tests, contracts-check) and pushed
-  at 3de4012 (T-FEATURES merged).
+- `main` at cc8f1a0 (T-FEATURES + T-REPLAY merged, 580 tests locally) but
+  CI is RED: platform ULP tie in exact-rank percentiles
+  (tests/features golden, air_temp_slope_4h). Fix branch fix/features-ci in
+  flight (worktree wt-features-ci); must merge before any other merge.
 - In flight (worktrees under the session scratchpad, `git worktree list`):
-  feat/replay (T-REPLAY, review 3 pending after two fix passes),
   feat/web-shell (T-WEB-SHELL, still building), feat/model (T-MODEL, Phase 4
   started early since it only needs features), fix/features-settings (R22).
 
