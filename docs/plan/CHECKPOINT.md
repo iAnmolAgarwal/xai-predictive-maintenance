@@ -1,15 +1,14 @@
 # Orchestrator checkpoint (auto-maintained; read this first after /compact)
 
-Updated: 2026-09-14 22:40 IST
+Updated: 2026-09-14 22:50 IST
 
 ## Where we are
 - Phase 1 (plan) DONE. Phase 2 (infra, data, contracts) DONE and merged into main.
-- Local `main` is ahead of origin and NOT pushed: it fails mypy with one
-  unused-ignore in backend/xpm/config.py until `fix/contracts-followup` merges.
-  Push main immediately after that merge.
+- `main` is green (ruff, mypy --strict, 325 tests, contracts-check) and pushed
+  at 352e88b.
 - Phase 3 in progress, one worktree each under the session scratchpad
   (`git worktree list` shows them): feat/features (T-FEATURES),
-  feat/replay (T-REPLAY), feat/web-shell (T-WEB-SHELL), fix/contracts-followup.
+  feat/replay (T-REPLAY), feat/web-shell (T-WEB-SHELL).
 
 ## Loop for every branch (unchanged)
 builder -> code-reviewer (+ security-reviewer for api/infra, + ux-reviewer for
