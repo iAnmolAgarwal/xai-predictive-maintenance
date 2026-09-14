@@ -28,7 +28,6 @@ from fastapi import APIRouter, FastAPI, Query
 from fastapi import Path as PathParam
 from fastapi.openapi.utils import get_openapi
 
-from xpm.config import get_settings
 from xpm.contracts.common import AlertId, AlertSeverity, MachineId, ModelKind, PlantId
 from xpm.contracts.mqtt import ReplayCommand, ReplayState
 from xpm.contracts.rest import (
@@ -62,8 +61,12 @@ API_VERSION = "1.0.0"
 DEFAULT_ALERT_PAGE_SIZE = 50
 DEFAULT_IMPORTANCE_LIMIT = 20
 
-_SETTINGS = get_settings()
-DEFAULT_MAX_SERIES_POINTS = _SETTINGS.api.max_series_points
+#: Default `max_points` on the two series endpoints. Pinned as a literal rather
+#: than read from `get_settings()` so an `XPM_API__MAX_SERIES_POINTS` override in
+#: the exporting shell cannot silently rewrite the committed artefact.
+#: `tests/contracts/test_openapi_is_current.py` asserts it equals the
+#: `api.max_series_points` default, so the two cannot drift.
+DEFAULT_MAX_SERIES_POINTS = 2000
 
 DEFAULT_OUT = Path("contracts") / "openapi.json"
 

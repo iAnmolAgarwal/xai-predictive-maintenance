@@ -8,17 +8,29 @@ comparison in CI.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import pytest
+import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPORTER = REPO_ROOT / "scripts" / "export_openapi.py"
 COMMITTED = REPO_ROOT / "contracts" / "openapi.json"
+
+
+def _load_exporter() -> ModuleType:
+    """Import ``scripts/export_openapi.py`` by path; ``scripts`` is not a package."""
+    spec = importlib.util.spec_from_file_location("xpm_export_openapi", EXPORTER)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 @pytest.fixture(scope="module")
@@ -165,3 +177,23 @@ def test_fastapi_default_error_schemas_are_absent(document: dict[str, Any]) -> N
     schemas = document["components"]["schemas"]
     assert "HTTPValidationError" not in schemas
     assert "ValidationError" not in schemas
+
+
+def test_exporter_max_points_matches_the_settings_default() -> None:
+    """The literal pinned in the exporter may not drift from the settings default.
+
+    ``scripts/export_openapi.py`` deliberately does not call ``get_settings()``:
+    an ``XPM_API__MAX_SERIES_POINTS`` override in the exporting shell would
+    silently rewrite the committed artefact. This is the guard that keeps the
+    pinned literal honest.
+    """
+    exporter = _load_exporter()
+    configured = yaml.safe_load(
+        (REPO_ROOT / "config" / "settings.yaml").read_text(encoding="utf-8")
+    )
+    assert configured["api"]["max_series_points"] == exporter.DEFAULT_MAX_SERIES_POINTS
+    telemetry = json.loads(COMMITTED.read_text(encoding="utf-8"))["paths"]["/api/telemetry"]
+    max_points = next(
+        param for param in telemetry["get"]["parameters"] if param["name"] == "max_points"
+    )
+    assert max_points["schema"]["default"] == exporter.DEFAULT_MAX_SERIES_POINTS

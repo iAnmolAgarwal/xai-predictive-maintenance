@@ -20,7 +20,9 @@ from typing import Any
 
 import pytest
 from pydantic import BaseModel, ValidationError
+from pydantic_settings import BaseSettings
 
+from xpm import contracts
 from xpm.contracts import (
     Ai4iLabels,
     Ai4iMeta,
@@ -73,8 +75,10 @@ from xpm.contracts import (
     TopFeature,
     WhatIfRequest,
     WhatIfResponse,
+    XpmModel,
 )
 from xpm.contracts.channels import AI4I_CHANNELS
+from xpm.contracts.settings import SettingsSection
 
 TS = datetime(2026, 9, 14, 10, 22, 31, 500000, tzinfo=UTC)
 DATASET_TS = datetime(2026, 1, 2, 10, 45, 0, tzinfo=UTC)
@@ -610,29 +614,50 @@ def test_status_and_severity_are_different_enums() -> None:
         )
 
 
-def test_every_model_instance_is_covered() -> None:
+def _wire_models() -> set[str]:
+    """Every wire model the contracts package exports, by class name.
+
+    Derived from ``xpm.contracts.__all__`` so a model added to the package is
+    automatically demanded here. Three groups are out of scope:
+
+    * ``XpmModel`` and ``SettingsSection`` — shared bases, never sent as such;
+    * the settings tree, which is a config document rather than a payload and is
+      round-tripped by ``tests/contracts/test_settings.py``;
+    * re-export aliases such as ``ClientFrame``, whose class is another name in
+      the same set (``PongFrame``).
+    """
+    names: set[str] = set()
+    for exported in contracts.__all__:
+        obj = getattr(contracts, exported)
+        if not isinstance(obj, type) or not issubclass(obj, BaseModel):
+            continue
+        if issubclass(obj, SettingsSection | BaseSettings) or obj is XpmModel:
+            continue
+        names.add(obj.__name__)
+    return names
+
+
+def _exercised_models(value: Any, seen: set[str]) -> set[str]:
+    """Class names of every model instance reachable from ``value``.
+
+    Nested models (``Ai4iMeta`` inside a ``TelemetryMessage``, ``AlertMarker``
+    inside a ``RiskSeries``) are exercised by the round trip of their container,
+    so the walk has to descend rather than look only at the top level.
+    """
+    if isinstance(value, BaseModel):
+        seen.add(type(value).__name__)
+        for field in type(value).model_fields:
+            _exercised_models(getattr(value, field), seen)
+    elif isinstance(value, list | tuple | set | frozenset):
+        for item in value:
+            _exercised_models(item, seen)
+    elif isinstance(value, dict):
+        for item in value.values():
+            _exercised_models(item, seen)
+    return seen
+
+
+def test_every_contract_model_is_exercised() -> None:
     """Guards against a model being added to the contracts but not exercised."""
-    exercised = {type(model).__name__ for model in MODELS}
-    missing = {
-        "TelemetryMessage",
-        "RiskMessage",
-        "AlertMessage",
-        "ReplayCommand",
-        "ReplayState",
-        "Heartbeat",
-        "HelloFrame",
-        "SnapshotFrame",
-        "TelemetryFrame",
-        "RiskFrame",
-        "AlertFrame",
-        "ExplanationFrame",
-        "ReplayStateFrame",
-        "ConfigFrame",
-        "PingFrame",
-        "ErrorFrame",
-        "PongFrame",
-        "Explanation",
-        "WhatIfResponse",
-        "PlantSnapshot",
-    } - exercised
-    assert not missing
+    exercised = _exercised_models(list(MODELS), set())
+    assert _wire_models() - exercised == set()
