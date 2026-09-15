@@ -44,12 +44,27 @@ GOLDEN_MACHINES: Final[dict[str, str]] = {"ai4i": "ai4i-01", "ims": "ims-01"}
 #: Placeholder-free ids for the fixtures, matching the contract patterns.
 GOLDEN_ALERT_ID: Final[str] = "alt_0123456789abcdef"
 
-#: Relative tolerance when a golden float is compared. The structure, the
-#: strings and the feature order are compared exactly; the SHAP values are
-#: compared with a tolerance because they come from a LightGBM fit, and a
-#: different libomp build can move the last bits without changing anything the
-#: user sees.
-GOLDEN_RTOL: Final[float] = 1e-6
+#: Relative tolerance when a golden float is compared.
+#:
+#: The structure, the strings, the ints, the literals and the bar order are
+#: compared **exactly**; only the floats get a tolerance, because a SHAP value
+#: is a float64 reduction over a LightGBM ensemble and no such reduction is
+#: bit-identical across instruction sets (R5 promises reproducibility for the
+#: same seed, speed and config on *one* machine, not cross-platform bit
+#: identity; the same argument is made at length in
+#: ``xpm.features.percentiles``, whose ``RANK_RTOL`` is the precedent, R22).
+#:
+#: **Sizing evidence.** Both goldens were regenerated on ``linux/amd64``
+#: (Debian bookworm, Python 3.12, the CI runner's architecture) and compared
+#: field-by-field against the committed ones, generated on macOS arm64. Six of
+#: the 60-odd floats differed and nothing else did — no string, no percentile,
+#: no span offset, no ordering. The largest relative deviation was **5.23e-16**
+#: (``ai4i`` ``temp_diff_slope_24h.value``, -0.10618858734311525 vs
+#: -0.1061885873431153, about two ULPs); the other five were 1.3e-16 to
+#: 2.0e-16, i.e. one ULP. 1e-12 sits four decades above that noise floor and
+#: ten decades below the three significant figures any of these numbers is
+#: printed to, so no change a reader could see can hide under it.
+GOLDEN_RTOL: Final[float] = 1e-12
 
 
 def tiny_matrix(plant_id: PlantId) -> TrainingMatrix:
