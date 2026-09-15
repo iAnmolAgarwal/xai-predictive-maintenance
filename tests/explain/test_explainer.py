@@ -272,6 +272,10 @@ def test_golden_explanation(
 ) -> None:
     """The full ``Explanation`` for one alert-level row per plant.
 
+    The comparison is structural rather than a model-wide ``==``: see
+    :func:`_assert_matches` for what it still proves and why the SHAP floats
+    are the one thing it cannot pin to the last bit.
+
     Regenerate with ``uv run pytest tests/explain --update-goldens``.
     """
     explainer: Explainer = request.getfixturevalue(f"{plant_id}_lgbm")
@@ -290,32 +294,51 @@ def test_golden_explanation(
         return
 
     expected = json.loads(path.read_text(encoding="utf-8"))
+    # The fixture is a valid ``Explanation`` and survives a round trip through
+    # it unchanged, byte for byte: that is what catches a contract field the
+    # golden was never regenerated for, and it is a same-machine comparison, so
+    # it can be exact.
+    assert json.loads(Explanation.model_validate(expected).model_dump_json()) == expected
     _assert_matches(expected, produced, path=plant_id)
-    assert Explanation.model_validate(expected) == explanation
 
 
 def _assert_matches(expected: Any, produced: Any, *, path: str) -> None:
-    """Compare exactly, except for floats, which are compared to a tolerance.
+    """Compare the golden to the produced explanation, float tolerance aside.
 
-    Strings, ordering and structure are the contract; the last bits of a SHAP
-    float are the LightGBM build's business.
+    Everything a reader of the dashboard could notice is compared **exactly**:
+    every key of every object, every list length, every position in every list
+    (so a swapped waterfall bar fails), and every string, int, bool and null —
+    the templates, the framings, the caveat, the span offsets and
+    ``other_contributions_count`` among them. Only ``float`` versus ``float``
+    is compared to :data:`~tests.explain.GOLDEN_RTOL`, and the types must still
+    match: a float where the golden holds an int, or an int where it holds a
+    float, is a contract change and fails here.
+
+    The whole-model ``==`` this replaced could not survive CI. A SHAP value is
+    a float64 reduction over a LightGBM ensemble, and the same fit of the same
+    seed lands one to two ULPs apart on arm64 and x86-64; R5 scopes
+    reproducibility to one machine for exactly this reason. See
+    :data:`~tests.explain.GOLDEN_RTOL` for the measured deviations.
     """
     if isinstance(expected, dict):
-        assert isinstance(produced, dict)
+        assert isinstance(produced, dict), path
         assert expected.keys() == produced.keys(), path
         for key in expected:
             _assert_matches(expected[key], produced[key], path=f"{path}.{key}")
         return
     if isinstance(expected, list):
-        assert isinstance(produced, list)
+        assert isinstance(produced, list), path
         assert len(expected) == len(produced), path
         for position, (left, right) in enumerate(zip(expected, produced, strict=True)):
             _assert_matches(left, right, path=f"{path}[{position}]")
         return
-    if isinstance(expected, float) and isinstance(produced, float):
-        assert produced == pytest.approx(expected, rel=GOLDEN_RTOL, abs=GOLDEN_RTOL), path
+    assert type(produced) is type(expected), f"{path}: {produced!r} is not a {type(expected)}"
+    if isinstance(expected, float):
+        assert produced == pytest.approx(expected, rel=GOLDEN_RTOL, abs=0.0), (
+            f"{path}: {produced!r} != {expected!r}"
+        )
         return
-    assert produced == expected, path
+    assert produced == expected, f"{path}: {produced!r} != {expected!r}"
 
 
 def test_the_tiny_matrices_are_real_held_out_data() -> None:
