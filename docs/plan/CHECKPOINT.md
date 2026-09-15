@@ -1,6 +1,6 @@
 # Orchestrator checkpoint (auto-maintained; read this first after /compact or resume)
 
-Updated: 2026-09-15 17:20 IST — Phase 4: T-API + seven T-WEB-* builders in flight.
+Updated: 2026-09-15 18:30 IST — usage limit hit at ~17:40 and reset at 18:20; Phase 4 builders relaunched.
 
 ## Where we are
 - Phase 1, 2, 3 DONE and merged: T-FEATURES, T-REPLAY, fix/features-ci,
@@ -17,7 +17,13 @@ Updated: 2026-09-15 17:20 IST — Phase 4: T-API + seven T-WEB-* builders in fli
     security-reviewer, fix loop, merge.
   - MERGED since: fix/explain-ci (golden rtol 1e-12; CI green), feat/web-mocks
     (T-WEB-MOCKS, review 1 NEEDS_WORK → fix pass → review 2 APPROVED).
-  - Seven T-WEB-* frontend-builders IN FLIGHT, one per worktree
+  - 17:40 429: all eight builders died. T-API kept 3 commits + dirty tests;
+    feature worktrees were empty. 18:25 relaunched: T-API (continue) +
+    plant-floor, machine-detail, shap-viz, alert-feed. STILL TO LAUNCH when
+    a slot frees: playback, whatif, model-compare (worktrees exist, clean;
+    model-compare has an untracked stub dir to inspect). Cap concurrent
+    builders at ~5 to avoid another session-limit hit.
+  - Seven T-WEB-* frontend-builders, one per worktree
     wt-web-{plant-floor,machine-detail,shap-viz,alert-feed,playback,whatif,
     model-compare} on branches feat/web-<name> off main (post web-mocks).
     Shared brief: scratchpad/briefs/web-common.md; ports 5500–5569. Each
