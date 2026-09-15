@@ -282,9 +282,16 @@ export function datasetTsFor(plantId: PlantId, tick: number): string {
   return isoAt(DATASET_START, PLANT_SHAPE[plantId].row_interval_seconds * tick);
 }
 
+/**
+ * The live settings tree is the single source of these edges, so a
+ * `PUT /api/config` that moves `alerting.probability_threshold` moves the ring
+ * colours with it; the exported constants are only the defaults it starts from.
+ */
 export function statusFor(probability: number): MachineStatus {
-  if (probability >= PROBABILITY_THRESHOLD) return 'alert';
-  if (probability >= WATCH_THRESHOLD) return 'watch';
+  if (probability >= configNumber('alerting.probability_threshold', PROBABILITY_THRESHOLD))
+    return 'alert';
+  if (probability >= configNumber('alerting.watch_threshold', WATCH_THRESHOLD))
+    return 'watch';
   return 'healthy';
 }
 
@@ -470,6 +477,12 @@ export function setReplay(
   patch: Partial<Pick<MockState, 'playing' | 'speed' | 'tick'>>,
 ): void {
   state = { ...state, ...patch };
+}
+
+/** One numeric setting from the live tree, falling back to its shipped default. */
+export function configNumber(key: string, fallback: number): number {
+  const value = state.configValues[key];
+  return typeof value === 'number' ? value : fallback;
 }
 
 export function applyConfigValues(values: ConfigResponse['values']): void {

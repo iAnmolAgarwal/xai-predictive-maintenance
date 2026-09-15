@@ -7,7 +7,7 @@
  *              settings tree and the mutable replay/config state
  * - `catalog`  the feature catalogue and its framing metadata
  * - `explain`  clause grammar, explanations, comparisons, what-if
- * - `alerts`   the 63-alert corpus with filtering and cursor paging
+ * - `alerts`   the 62-alert corpus with filtering and cursor paging
  * - `machines` live scalars, sparklines, snapshot rows
  * - `series`   columnar telemetry/risk, beeswarm, `state_at`, model registry
  *

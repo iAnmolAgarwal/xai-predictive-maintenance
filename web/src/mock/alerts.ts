@@ -11,6 +11,7 @@
  */
 import type { Alert, AlertPage, AlertSeverity, PlantId } from '@/contracts';
 import {
+  configNumber,
   CURRENT_TICK,
   DEMO_ALERT_ID,
   IMS_DEMO_ALERT_ID,
@@ -34,11 +35,25 @@ import { explanationIdFor, headlineFor } from './explain';
  */
 export const DEMO_ALERT_TICK = CURRENT_TICK;
 
-/** Severity bands, `alerting.severity_bands.*`; the probability picks the band. */
+/**
+ * Severity bands come from the live settings tree (`alerting.severity_bands.*`),
+ * so a `PUT /api/config` that moves a band re-bands the corpus instead of leaving
+ * the rail's chips contradicting `GET /api/config`.
+ */
 function severityFor(probability: number): AlertSeverity {
-  if (probability >= 0.9) return 'critical';
-  if (probability >= 0.75) return 'high';
+  if (probability >= configNumber('alerting.severity_bands.critical', 0.9))
+    return 'critical';
+  if (probability >= configNumber('alerting.severity_bands.high', 0.75)) return 'high';
   return 'medium';
+}
+
+/**
+ * The corpus is built once at module load, but `run_id` and `severity` are read
+ * from the live state on the way out: a `restart` mints a new run id and every
+ * alert the API then serves belongs to it, exactly as a re-scored corpus would.
+ */
+function stamp(alert: Alert): Alert {
+  return { ...alert, run_id: currentRunId(), severity: severityFor(alert.probability) };
 }
 
 const DEMO_PROBABILITY: Record<PlantId, number> = { ai4i: 0.771, ims: 0.74 };
@@ -180,16 +195,17 @@ const CORPUS = buildCorpus();
 
 /** Every fixture alert, newest dataset time first. */
 export function allAlerts(): Alert[] {
-  return CORPUS.map((entry) => entry.alert);
+  return CORPUS.map((entry) => stamp(entry.alert));
 }
 
 export function findAlert(alertId: string): Alert | undefined {
-  return CORPUS.find((entry) => entry.alert.alert_id === alertId)?.alert;
+  const found = CORPUS.find((entry) => entry.alert.alert_id === alertId)?.alert;
+  return found === undefined ? undefined : stamp(found);
 }
 
 export function alertsForMachine(machineId: string): Alert[] {
-  return CORPUS.filter((entry) => entry.alert.machine_id === machineId).map(
-    (entry) => entry.alert,
+  return CORPUS.filter((entry) => entry.alert.machine_id === machineId).map((entry) =>
+    stamp(entry.alert),
   );
 }
 
@@ -201,7 +217,8 @@ export function openAlertAt(machineId: string, tick: number): Alert | null {
       entry.tick <= tick &&
       (entry.closedTick === null || entry.closedTick > tick),
   );
-  return open[0]?.alert ?? null;
+  const first = open[0]?.alert;
+  return first === undefined ? null : stamp(first);
 }
 
 /** `dataset_ts <= t AND (closed_dataset_ts IS NULL OR closed_dataset_ts > t)`. */
@@ -211,7 +228,7 @@ export function activeAlertsAt(plantId: PlantId, tick: number): Alert[] {
       entry.alert.plant_id === plantId &&
       entry.tick <= tick &&
       (entry.closedTick === null || entry.closedTick > tick),
-  ).map((entry) => entry.alert);
+  ).map((entry) => stamp(entry.alert));
 }
 
 /** The tick an alert was raised on, for lining markers up with a risk series. */
@@ -272,7 +289,7 @@ export function queryAlerts(query: AlertQuery): AlertPage {
 /** The dataset tick a machine's alerts fall on, for the risk timeline markers. */
 export function markerTicks(machineId: string): Array<{ alert: Alert; tick: number }> {
   return CORPUS.filter((entry) => entry.alert.machine_id === machineId).map((entry) => ({
-    alert: entry.alert,
+    alert: stamp(entry.alert),
     tick: entry.tick,
   }));
 }
