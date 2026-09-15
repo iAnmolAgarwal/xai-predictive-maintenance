@@ -1,30 +1,31 @@
 # Orchestrator checkpoint (auto-maintained; read this first after /compact or resume)
 
-Updated: 2026-09-15 14:40 IST — Phase 3 closed except feat/model; Phase 4 started.
+Updated: 2026-09-15 16:05 IST — Phase 3 closed; Phase 4 backend critical path in flight.
 
 ## Where we are
-- Phase 1, 2 DONE. Phase 3 merged into main: T-FEATURES, T-REPLAY,
-  fix/features-ci (f5aebd4, CI GREEN), fix/features-settings (8d6ebf4, CI
-  GREEN), feat/web-shell (a2883af; CI web job RED only because
-  pnpm/action-setup has no version — fix/infra-ci in flight).
+- Phase 1, 2, 3 DONE and merged: T-FEATURES, T-REPLAY, fix/features-ci,
+  fix/features-settings, feat/web-shell, fix/infra-ci (PR #1, both reviews
+  APPROVED, CI green), feat/model (APPROVED x2), feat/shap (T-SHAP, review 1
+  + ruling R24). CI on main GREEN through the model merge; the shap merge
+  push is the latest run.
 - main history is trailer-free, author anmolagarwal2625+github@gmail.com.
 - Branches / worktrees (`git worktree list`; OLD scratchpad
   9a9ac25c-… holds wt-model, NEW scratchpad af9e2a51-… holds the rest):
-  - feat/model (wt-model, 8 commits, rebased on main, APPROVED by
-    model-code-1 + model-code-2, full gate green after rebase): MERGE NEXT,
-    as soon as CI is green again.
-  - fix/infra-ci (wt-infra-ci, infra-builder IN FLIGHT): pnpm/action-setup
-    package_json_file, web build + mock guard step in CI, SHA-pin actions,
-    Dockerfile tdigest comments. Needs code-reviewer + security-reviewer,
-    then merge and confirm CI green BEFORE any other merge.
-  - feat/shap (wt-shap, branched from feat/model be20040, backend-builder
-    IN FLIGHT on T-SHAP): after feat/model merges, `git rebase main` it,
-    then code-reviewer.
-  - feat/web-mocks (wt-web-mocks, frontend-builder IN FLIGHT on T-WEB-MOCKS
-    per new ruling R23): extends web/src/mock to the full §3.1 REST + WS
-    surface. code-reviewer (+ux-reviewer light) then merge; THEN spawn the
-    seven T-WEB-* feature builders in parallel, each on feat/web-<name>
-    worktrees off main, briefs from frontend.md §1.2/§2/§4.2/§4.3/§4.5/§6.
+  - feat/api (wt-api, branched from the PRE-rebase feat/shap head b568e82;
+    backend-builder IN FLIGHT on T-API). When it reports: `git rebase --onto
+    main b568e82 feat/api` in wt-api, run the gate, then code-reviewer AND
+    security-reviewer, fix loop, merge.
+  - feat/web-mocks (wt-web-mocks, 3 commits, BUILD DONE, code review IN
+    FLIGHT → reviews/web-mocks-code-1.md). On APPROVED: merge, then spawn
+    the seven T-WEB-* feature builders in parallel on feat/web-<name>
+    worktrees off main (briefs: frontend.md §1.2/§2/§4.2/§4.3/§4.5/§6, R23,
+    R24 direction/spans notes, the reviewer's fixture map).
+  - Rulings added this session: R23 (mock ownership), R24 (SHAP additivity
+    5e-3 + grammar additions), R25 (warm-up: no scoring while NaN).
+  - T-INFRA follow-ups pending (fold into T-NODERED's infra brief): `make
+    evaluate` must run scripts/faithfulness.py first (R24); `make setup`
+    should run `contracts-ts`; CI guard grep should be case-insensitive on
+    contents; §2.2 should list `contracts-ts`.
 - Reviews of this session live in the NEW scratchpad `reviews/`:
   model-code-1/2, features-ci-code-2 (+Review 3), web-shell-verdicts.md
   (code-2 + ux-2 both APPROVED, delivered inline).
