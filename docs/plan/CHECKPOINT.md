@@ -1,41 +1,46 @@
 # Orchestrator checkpoint (auto-maintained; read this first after /compact or resume)
 
-Updated: 2026-09-15 14:05 IST — Phase 3 review loop; disk-full incident recovered.
+Updated: 2026-09-15 14:40 IST — Phase 3 closed except feat/model; Phase 4 started.
 
 ## Where we are
-- Phase 1, 2 DONE. Phase 3: T-FEATURES and T-REPLAY merged into main.
-- `main` = 5992600 (history rewritten: no AI trailers, author
-  anmolagarwal2625+github@gmail.com = GitHub iAnmolAgarwal; force-pushed).
-  CI on main is RED (platform ULP tie in exact-rank percentiles,
-  tests/features golden `air_temp_slope_4h`, one rank off on Linux).
-- 2026-09-15 13:35: all four branches rebased onto the rewritten main
-  (`git rebase --onto main <old-base>` + amend: trailers stripped, author
-  forced to +github). All worktrees clean; every fix-pass commit was already
-  committed before the builders died. Reviews spawned in parallel:
-  features-ci-code-1, model-code-1, web-shell-code-2, web-shell-ux-2 (reports
-  land in the NEW session scratchpad
-  `/private/tmp/claude-501/-Users-anmolagarwal-iotAnalyticsLab-epm/af9e2a51-3cb6-469f-b450-ace4807a1d0a/scratchpad/reviews/`).
-- Worktrees still live under the OLD session scratchpad (`git worktree list`):
-  - wt-features-ci / fix/features-ci (off main 702475a, 2 commits 8912960
-    bdad617): review 1 NEEDS_WORK (ULP test tautology, Linux proof missing);
-    fix pass 1 IN FLIGHT (backend-builder). Then re-review, merge FIRST. Rank tie test tolerant
-    to float64 noise (RANK_RTOL=1e-9 scaled by running max |value|), ai4i
-    golden regenerated (28 ranks moved, 0 values), ULP-perturbation tests,
-    benchmark-disabled guard. Proven on x86-64 Linux in docker (pre-fix main
-    fails, branch passes 581). Next: code-reviewer, then merge FIRST.
-  - wt-web-shell / feat/web-shell (20 commits on main, head 158be0a, clean):
-    APPROVED by code review 2 AND UX review 2 (see new scratchpad
-    reviews/web-shell-verdicts.md). Merge after fix/features-ci + settings.
-  - wt-features-settings / fix/features-settings (4 commits on main, clean,
-    rebased): APPROVED (old scratchpad features-settings-code-1.md). Merge
-    right after fix/features-ci.
-  - wt-model / feat/model (8 commits, head be20040, clean): review 1
-    NEEDS_WORK (top-level current symlink), fix pass 1 done, review 2 IN
-    FLIGHT. T-SHAP handoff notes are in reviews/model-code-1.md. Report in
-    scratchpad/reviews/model-build-report.md (key deviations: plant level in
-    registry path, grouped_time split rule, warm-up NaN drop, libomp on mac).
-    Next: code-reviewer (check deviations against §3.7/R5/R16), then merge
-    after the Phase 3 branches.
+- Phase 1, 2 DONE. Phase 3 merged into main: T-FEATURES, T-REPLAY,
+  fix/features-ci (f5aebd4, CI GREEN), fix/features-settings (8d6ebf4, CI
+  GREEN), feat/web-shell (a2883af; CI web job RED only because
+  pnpm/action-setup has no version — fix/infra-ci in flight).
+- main history is trailer-free, author anmolagarwal2625+github@gmail.com.
+- Branches / worktrees (`git worktree list`; OLD scratchpad
+  9a9ac25c-… holds wt-model, NEW scratchpad af9e2a51-… holds the rest):
+  - feat/model (wt-model, 8 commits, rebased on main, APPROVED by
+    model-code-1 + model-code-2, full gate green after rebase): MERGE NEXT,
+    as soon as CI is green again.
+  - fix/infra-ci (wt-infra-ci, infra-builder IN FLIGHT): pnpm/action-setup
+    package_json_file, web build + mock guard step in CI, SHA-pin actions,
+    Dockerfile tdigest comments. Needs code-reviewer + security-reviewer,
+    then merge and confirm CI green BEFORE any other merge.
+  - feat/shap (wt-shap, branched from feat/model be20040, backend-builder
+    IN FLIGHT on T-SHAP): after feat/model merges, `git rebase main` it,
+    then code-reviewer.
+  - feat/web-mocks (wt-web-mocks, frontend-builder IN FLIGHT on T-WEB-MOCKS
+    per new ruling R23): extends web/src/mock to the full §3.1 REST + WS
+    surface. code-reviewer (+ux-reviewer light) then merge; THEN spawn the
+    seven T-WEB-* feature builders in parallel, each on feat/web-<name>
+    worktrees off main, briefs from frontend.md §1.2/§2/§4.2/§4.3/§4.5/§6.
+- Reviews of this session live in the NEW scratchpad `reviews/`:
+  model-code-1/2, features-ci-code-2 (+Review 3), web-shell-verdicts.md
+  (code-2 + ux-2 both APPROVED, delivered inline).
+- Old worktrees wt-features-ci / wt-features-settings / wt-web-shell are
+  merged; remove them (`git worktree remove`) when convenient.
+
+## Next after the in-flight three
+1. Merge order: fix/infra-ci (after 2 reviews) → feat/model → feat/web-mocks
+   → feat/shap (after review) → T-API (backend-builder; needs SHAP; code +
+   security review) → T-NODERED (infra-builder) → seven T-WEB-* (code + ux
+   each) → Phase 5 (T-WEB-E2E → T-PERF → T-DOCS → fresh-reader → final
+   review + codex audit) → Phase 6 tag v1.0.0.
+2. T-API brief must carry: model-code-1 handoff notes, T-SHAP report, the
+   warm-up NaN alert-suppression decision (first ~14.3 h of features are
+   NaN; suppress scoring until the vector is complete and expose it as
+   `MachineSummary.probability = null`), R10/R11/R12/R21.
 
 ## Resume procedure
 1. `gh auth status`; `git status`; `git worktree list`; check each worktree
