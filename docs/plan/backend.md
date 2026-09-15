@@ -1960,7 +1960,8 @@ full-dataset training run is a `make train` concern, not a unit test.
 Target 88 %.
 
 **explain** — `test_explainer.py`: **additivity in probability space** —
-`base_value + sum(all shap) == output_value` to `atol=1e-6` for both models on
+`base_value + sum(all shap) == output_value` to `atol=5e-3` (R24: `shap`'s
+interventional TreeSHAP residual on the AI4I booster; was 1e-6) for both models on
 20 rows; `output_value == probability` to `atol=1e-9`; and
 `base_value + Σ contributions[].shap + other_contributions_shap ==
 output_value` to `atol=1e-6` so the truncated top-k waterfall closes exactly

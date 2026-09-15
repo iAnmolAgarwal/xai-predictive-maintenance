@@ -179,3 +179,32 @@ T-MODEL's machine-generated file). (Review 2 item 16.)
   runs against the shared mock as shipped by `T-WEB-MOCKS`.
 - Mock fixtures are the frontend's test data only; nothing in `web/src/mock/`
   ships in a production bundle (frontend.md §1.1 guard stays in force).
+
+## R24 — SHAP additivity tolerance and explanation-grammar additions (2026-09-15)
+Source: scratchpad reviews/shap-code-1.md (T-SHAP code review 1), whose
+investigation reproduced the residual and excluded every branch-side cause.
+- `shap` 0.52 interventional TreeSHAP is not exactly additive on the AI4I
+  LightGBM booster (max |base + Σφ − p| = 2.3e-3 in probability space, growing
+  with tree count; IMS and both RF models are ~1e-9; `tree_path_dependent` is
+  exact but forbidden by R3). backend.md §4's untruncated-vector tolerance is
+  amended from `atol=1e-6` to `atol=5e-3` (`FULL_VECTOR_ADDITIVITY_ATOL`).
+  Unchanged and still required: `output_value == probability` to 1e-9 and the
+  drawn waterfall `base + Σ contributions + other_contributions_shap ==
+  output_value` to 1e-6, which holds by construction because
+  `other_contributions_shap` is derived from the on-screen probability.
+  T-DOCS records this as an ADR with the measured numbers.
+- §3.9 gains a ninth, feature-aware clause for the in-band, no-rank case:
+  `"{display} sat at {value}, inside its normal {floor}-{ceiling} band"`.
+  `threshold.up/down` fire only on a real crossing; a declared-`threshold`
+  feature inside its nominal band with a history rank renders `percentile`.
+- `SentenceSpan` slices the channel `{display}` prefix of each clause (§3.9's
+  `{display}`), which is the leading segment of `ShapContribution.display_name`;
+  the frontend links spans to bars by `SentenceSpan.feature`, never by text.
+- `ShapContribution.direction` is the sign of the SHAP value (drives ▲/▼) and
+  may differ from the clause wording; the frontend never derives wording from it.
+- `docs/EVALUATION.md` is a machine-generated artefact: a task whose real run
+  changes its content may commit the regenerated file in its own `docs(...)`
+  commit (T-SHAP's b568e82 is accepted). Code in `scripts/evaluate.py` stays
+  T-MODEL's.
+- T-INFRA follow-up (next infra task): `make evaluate` runs
+  `uv run python scripts/faithfulness.py` before `scripts/evaluate.py`.
