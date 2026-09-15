@@ -149,10 +149,12 @@ def build_report(
     alerts = sum(result.n_alerts for result in results)
     return {
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        # No pipe characters: this string is rendered as a Markdown table cell
+        # by `xpm.model.evaluate.render_markdown`.
         "method": (
-            "ablate the top-|SHAP| feature of every held-out row scored at or above "
-            "alerting.probability_threshold to its median in the frozen SHAP background, "
-            "then re-score with the same explainer configuration"
+            "ablate the largest-magnitude SHAP feature of every held-out row scored at "
+            "or above alerting.probability_threshold to its median in the frozen SHAP "
+            "background, then re-score with the same explainer configuration"
         ),
         "shap_space": "probability",
         "feature_perturbation": settings.model.shap.feature_perturbation,
