@@ -1,6 +1,6 @@
 # Orchestrator checkpoint (auto-maintained; read this first after /compact or resume)
 
-Updated: 2026-09-15 00:05 IST — PAUSED on usage limit mid Phase 3 review loop.
+Updated: 2026-09-15 13:40 IST — RESUMED; Phase 3 review loop in flight.
 
 ## Where we are
 - Phase 1, 2 DONE. Phase 3: T-FEATURES and T-REPLAY merged into main.
@@ -8,22 +8,28 @@ Updated: 2026-09-15 00:05 IST — PAUSED on usage limit mid Phase 3 review loop.
   anmolagarwal2625+github@gmail.com = GitHub iAnmolAgarwal; force-pushed).
   CI on main is RED (platform ULP tie in exact-rank percentiles,
   tests/features golden `air_temp_slope_4h`, one rank off on Linux).
-- Worktrees under the session scratchpad (`git worktree list`). Builders may
-  have died mid-fix on the usage limit; their uncommitted work is on disk:
-  - wt-features-ci / fix/features-ci (off cc8f1a0, 2 commits 3a01ed1 217458e,
-    clean, no trailers): BUILD DONE, NOT YET REVIEWED. Rank tie test tolerant
+- 2026-09-15 13:35: all four branches rebased onto the rewritten main
+  (`git rebase --onto main <old-base>` + amend: trailers stripped, author
+  forced to +github). All worktrees clean; every fix-pass commit was already
+  committed before the builders died. Reviews spawned in parallel:
+  features-ci-code-1, model-code-1, web-shell-code-2, web-shell-ux-2 (reports
+  land in the NEW session scratchpad
+  `/private/tmp/claude-501/-Users-anmolagarwal-iotAnalyticsLab-epm/af9e2a51-3cb6-469f-b450-ace4807a1d0a/scratchpad/reviews/`).
+- Worktrees still live under the OLD session scratchpad (`git worktree list`):
+  - wt-features-ci / fix/features-ci (off main 702475a, 2 commits 8912960
+    bdad617, clean, no trailers): BUILD DONE, code review 1 IN FLIGHT. Rank tie test tolerant
     to float64 noise (RANK_RTOL=1e-9 scaled by running max |value|), ai4i
     golden regenerated (28 ranks moved, 0 values), ULP-perturbation tests,
     benchmark-disabled guard. Proven on x86-64 Linux in docker (pre-fix main
     fails, branch passes 581). Next: code-reviewer, then merge FIRST.
-  - wt-web-shell / feat/web-shell (7 commits, 23 dirty files): fix pass 1 in
-    progress against scratchpad/reviews/web-shell-code-1.md (5 blockers) and
-    web-shell-ux-1.md (6 blockers). Re-review with code-reviewer AND
-    ux-reviewer after the pass.
-  - wt-features-settings / fix/features-settings (4 commits, clean):
-    APPROVED (features-settings-code-1.md). Merge after the CI fix.
-  - wt-model / feat/model (6 commits 57f3b44..2a00642, clean, no trailers):
-    T-MODEL BUILD DONE, NOT YET REVIEWED. Report in
+  - wt-web-shell / feat/web-shell (20 commits on main, clean): fix pass 1
+    COMMITTED (14 fix commits, no builder report). Code review 2 + UX review 2
+    IN FLIGHT.
+  - wt-features-settings / fix/features-settings (4 commits on main, clean,
+    rebased): APPROVED (old scratchpad features-settings-code-1.md). Merge
+    right after fix/features-ci.
+  - wt-model / feat/model (6 commits daf0f43..9719642 on main, clean, no
+    trailers): T-MODEL BUILD DONE, code review 1 IN FLIGHT. Report in
     scratchpad/reviews/model-build-report.md (key deviations: plant level in
     registry path, grouped_time split rule, warm-up NaN drop, libomp on mac).
     Next: code-reviewer (check deviations against §3.7/R5/R16), then merge
