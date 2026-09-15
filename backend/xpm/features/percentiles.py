@@ -34,16 +34,33 @@ machine and a CI runner, one count flipped, and a rank moved from 196/223 to
 So a history entry counts as "at or below" the query when it is not
 *meaningfully* greater:
 
-    history <= value + RANK_RTOL * max(|value|, scale)
+    history <= value + RANK_RTOL * scale
 
-``scale`` is the feature's own running maximum absolute value, which is what
-makes the tolerance usable for a statistic that cancels towards zero: a slope
-whose value is 1e-18 because its window is flat still gets a tolerance drawn
-from the magnitudes that slope actually reaches, instead of 1e-27. ``RANK_RTOL``
-is 1e-9 — about seven orders of magnitude above float64 rounding noise and,
-on the real datasets, six orders below the closest genuinely distinct pair of
-values a feature produces (measured on ``air_temp_slope_4h``: ULP neighbour at
-3.4e-16 relative, nearest real neighbour at 5.1e-3).
+``scale`` is the feature's own running maximum absolute value, updated with the
+current ``|value|`` before the comparison, which is what makes the tolerance
+usable for a statistic that cancels towards zero: a slope whose value is 1e-18
+because its window is flat still gets a tolerance drawn from the magnitudes that
+slope actually reaches, instead of 1e-27. ``RANK_RTOL`` is 1e-9 — about seven
+orders of magnitude above float64 rounding noise and, on the real datasets, six
+orders below the closest genuinely distinct pair of values a feature produces
+(measured on ``air_temp_slope_4h``: ULP neighbour at 3.4e-16 relative, nearest
+real neighbour at 5.1e-3).
+
+**Sizing evidence.** The committed ``ai4i`` golden is *identical* for every
+``RANK_RTOL`` in [1e-13, 1e-7] — a six-decade plateau, with 1e-9 at its centre.
+Outside it the fixture moves: 1 cell at 1e-14 and at 1e-6, 20 cells at 1e-15,
+28 cells at 0 (the untolerant comparison), and 12 cells at 1e-5. The plateau is
+the whole argument for the constant: any value in it gives the same ranks, so
+the choice is not tuned to a fixture.
+
+Regenerating the golden under the tolerance moved a handful of ranks by as much
+as ~40 counts (``temp_diff_p95_4h``: 12.56 → 30.94). Those are not noise being
+papered over — they are *representational* ties. ``ai4i``'s temperatures are
+recorded at 0.1 K resolution, so a difference of two of them takes one of a
+small set of values, and the float64 subtraction renders the same intended
+difference as two neighbouring doubles depending on the operands. Every one of
+those ranks resolves by ``RANK_RTOL`` 1e-14, i.e. they were always ties that the
+bit-exact comparison was splitting.
 
 :meth:`quantile` needs no such treatment and deliberately gets none: it sorts
 and interpolates rather than counting, so it has no step to fall off, and it
@@ -150,7 +167,7 @@ class PercentileBank:
         self._counts += observed
         # fmax ignores NaN, so a not-yet-computable feature leaves its scale alone.
         self._scale = np.fmax(self._scale, np.abs(values))
-        bound = values + RANK_RTOL * np.maximum(np.abs(values), self._scale)
+        bound = values + RANK_RTOL * self._scale
         below = np.count_nonzero(self._history <= bound[:, None], axis=1).astype(np.float64)
         with np.errstate(invalid="ignore", divide="ignore"):
             ranks: Float64Array = below / self._counts * _PERCENT
