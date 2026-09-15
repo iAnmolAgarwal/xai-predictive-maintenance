@@ -208,3 +208,19 @@ investigation reproduced the residual and excluded every branch-side cause.
   T-MODEL's.
 - T-INFRA follow-up (next infra task): `make evaluate` runs
   `uv run python scripts/faithfulness.py` before `scripts/evaluate.py`.
+
+## R25 — Warm-up scoring policy (2026-09-15)
+- The served models were trained on rows whose feature vector had no NaN
+  (T-MODEL `drop_warmup_rows`: the first ~14.3 h of every machine, and any
+  percentile below `features.percentile_warmup_samples`). The pipeline must
+  therefore **not score** a machine while its online feature vector contains
+  any NaN: no `risk` row is written, no `RiskUpdate` is emitted for that tick,
+  `MachineSummary.probability` and `dataset_ts`-aligned `risk_sparkline`
+  entries are `null`, `status` stays `"healthy"` (the UI renders the "not yet
+  scored" ring from `probability === null`, never from status), and no alert
+  can open. Telemetry is still persisted and broadcast during warm-up.
+- The first scored tick per machine per run is the first tick whose vector is
+  NaN-free. `GET /api/risk` therefore starts at that tick. `docs/ARCHITECTURE.md`
+  (T-DOCS) states the warm-up length per plant in dataset time.
+- A machine is `"offline"` only by the `api.offline_after_seconds` rule; warm-up
+  is never reported as offline.
