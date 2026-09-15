@@ -1,0 +1,8 @@
+# pnpm 11 reads the build-script allow-list from the workspace file, not
+# package.json. Only these three packages may run install scripts: esbuild and
+# unrs-resolver fetch their platform binary, msw copies its service worker into
+# public/.
+allowBuilds:
+  esbuild: true
+  msw: true
+  unrs-resolver: true

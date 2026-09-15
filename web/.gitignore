@@ -1,0 +1,4 @@
+# Build outputs of this package. The repo-root .gitignore already covers dist/,
+# coverage/, playwright-report/ and test-results/; dist-mock/ is the MSW-backed
+# build the Playwright smoke previews and is local-only.
+dist-mock/

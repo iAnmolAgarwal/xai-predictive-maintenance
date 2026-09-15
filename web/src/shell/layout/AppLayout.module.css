@@ -1,0 +1,52 @@
+.shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--rail-w);
+  grid-template-rows: var(--topbar-h) minmax(0, 1fr);
+  grid-template-areas:
+    'topbar topbar'
+    'main rail';
+  height: 100%;
+  background: var(--c-bg);
+}
+
+.shellNarrow {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'topbar'
+    'main';
+}
+
+.shell > header {
+  grid-area: topbar;
+}
+
+.skipLink {
+  position: absolute;
+  left: var(--s-3);
+  top: -100px;
+  z-index: 60;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-3);
+  color: var(--c-text);
+  font-size: var(--t-sm);
+}
+
+.skipLink:focus-visible {
+  top: var(--s-2);
+}
+
+.main {
+  grid-area: main;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.shell > aside {
+  grid-area: rail;
+}
+
+.shellNarrow > aside {
+  grid-area: auto;
+}

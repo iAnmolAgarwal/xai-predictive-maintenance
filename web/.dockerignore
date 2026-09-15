@@ -1,0 +1,11 @@
+node_modules
+dist
+# The MSW worker is mock-only and must never reach the production image.
+mock-public
+dist-mock
+coverage
+playwright-report
+test-results
+e2e
+.vite
+*.log
