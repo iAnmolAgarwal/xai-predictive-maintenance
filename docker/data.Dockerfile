@@ -10,11 +10,11 @@
 FROM ghcr.io/astral-sh/uv:0.11.32 AS uv
 
 FROM python:3.12-slim-bookworm AS builder
-# `tdigest` pulls in accumulation-tree, which is sdist-only and needs a C
-# compiler. It is confined to this stage; the runtime image has no toolchain.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# No compiler is installed here on purpose: every locked runtime dependency
+# publishes a cp312 manylinux wheel for both amd64 and arm64, so `uv sync`
+# never builds from source. The `build-essential` layer this stage used to
+# carry existed only for `tdigest` -> accumulation-tree, which R22 dropped from
+# pyproject. Adding a dependency without linux wheels means adding it back.
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
