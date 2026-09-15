@@ -23,12 +23,19 @@ Updated: 2026-09-15 18:30 IST — usage limit hit at ~17:40 and reset at 18:20; 
     a slot frees: playback, whatif, model-compare (worktrees exist, clean;
     model-compare has an untracked stub dir to inspect). Cap concurrent
     builders at ~5 to avoid another session-limit hit.
-  - 18:55 status: BUILT + awaiting review: plant-floor (7 commits; code +
-    ux reviews were stopped for the cap, relaunch both), shap-viz (5
-    commits; code review stopped, relaunch code + ux). alert-feed (6
-    commits): code + ux reviews IN FLIGHT. machine-detail: build IN FLIGHT.
-    T-API (feat/api, 7 commits, rebased on main): code + security reviews
-    IN FLIGHT. NOT STARTED: playback, whatif, model-compare.
+  - 19:45 status (≤5 agents): IN FLIGHT: T-API fix pass 1 (api-code-1 +
+    api-security-1 both NEEDS_WORK: config patch validated before persist,
+    consumer never dies, bounds on limit/max_points, snapshot after seek,
+    values[] nulls); alert-feed fix pass 1 (code-1: run-change announce,
+    seek re-fetch; ux-1: dead slide-in, keyboard ejection, Escape focus,
+    resolved chips too loud); plant-floor UX review; shap-viz code review;
+    playback BUILD. QUEUED: plant-floor fix pass (code-1 NEEDS_WORK: drop
+    `motion` from the initial bundle, −41 kB gz), machine-detail code+ux
+    reviews (build DONE, 6 commits, uplot chunked, 27 ms route), shap-viz
+    ux review, whatif + model-compare builds.
+    Shell follow-ups (one fix task after feature merges): smoke.spec.ts
+    lines 39/42; deep-link /machines/ims-01 must infer the plant from the
+    machine id (routes.tsx); demo-link ownership (shell vs floor.grid).
     Shell follow-up after feature merges: web/e2e/smoke.spec.ts lines 39/42
     assert the placeholder tiles and empty rail, which registered slots
     replace (assert machine-tile-* and alert-feed instead).
