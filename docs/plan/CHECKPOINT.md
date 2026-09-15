@@ -1,73 +1,67 @@
 # Orchestrator checkpoint (auto-maintained; read this first after /compact or resume)
 
-Updated: 2026-09-15 18:30 IST — usage limit hit at ~17:40 and reset at 18:20; Phase 4 builders relaunched.
+Updated: 2026-09-15 20:05 IST — PAUSED by the user (session limit nearly
+reached). All agents stopped cleanly; every worktree's state is below.
 
 ## Where we are
-- Phase 1, 2, 3 DONE and merged: T-FEATURES, T-REPLAY, fix/features-ci,
-  fix/features-settings, feat/web-shell, fix/infra-ci (PR #1, both reviews
-  APPROVED, CI green), feat/model (APPROVED x2), feat/shap (T-SHAP, review 1
-  + ruling R24). CI on main GREEN through the model merge; the shap merge
-  push is the latest run.
-- main history is trailer-free, author anmolagarwal2625+github@gmail.com.
-- Branches / worktrees (`git worktree list`; OLD scratchpad
-  9a9ac25c-… holds wt-model, NEW scratchpad af9e2a51-… holds the rest):
-  - feat/api (wt-api, branched from the PRE-rebase feat/shap head b568e82;
-    backend-builder IN FLIGHT on T-API). When it reports: `git rebase --onto
-    main b568e82 feat/api` in wt-api, run the gate, then code-reviewer AND
-    security-reviewer, fix loop, merge.
-  - MERGED since: fix/explain-ci (golden rtol 1e-12; CI green), feat/web-mocks
-    (T-WEB-MOCKS, review 1 NEEDS_WORK → fix pass → review 2 APPROVED).
-  - 17:40 429: all eight builders died. T-API kept 3 commits + dirty tests;
-    feature worktrees were empty. 18:25 relaunched: T-API (continue) +
-    plant-floor, machine-detail, shap-viz, alert-feed. STILL TO LAUNCH when
-    a slot frees: playback, whatif, model-compare (worktrees exist, clean;
-    model-compare has an untracked stub dir to inspect). Cap concurrent
-    builders at ~5 to avoid another session-limit hit.
-  - 19:45 status (≤5 agents): IN FLIGHT: T-API fix pass 1 (api-code-1 +
-    api-security-1 both NEEDS_WORK: config patch validated before persist,
-    consumer never dies, bounds on limit/max_points, snapshot after seek,
-    values[] nulls); alert-feed fix pass 1 (code-1: run-change announce,
-    seek re-fetch; ux-1: dead slide-in, keyboard ejection, Escape focus,
-    resolved chips too loud); plant-floor UX review; shap-viz code review;
-    playback BUILD. QUEUED: plant-floor fix pass (code-1 NEEDS_WORK: drop
-    `motion` from the initial bundle, −41 kB gz), machine-detail code+ux
-    reviews (build DONE, 6 commits, uplot chunked, 27 ms route), shap-viz
-    ux review, whatif + model-compare builds.
-    Shell follow-ups (one fix task after feature merges): smoke.spec.ts
-    lines 39/42; deep-link /machines/ims-01 must infer the plant from the
-    machine id (routes.tsx); demo-link ownership (shell vs floor.grid).
-    Shell follow-up after feature merges: web/e2e/smoke.spec.ts lines 39/42
-    assert the placeholder tiles and empty rail, which registered slots
-    replace (assert machine-tile-* and alert-feed instead).
-  - Seven T-WEB-* frontend-builders, one per worktree
-    wt-web-{plant-floor,machine-detail,shap-viz,alert-feed,playback,whatif,
-    model-compare} on branches feat/web-<name> off main (post web-mocks).
-    Shared brief: scratchpad/briefs/web-common.md; ports 5500–5569. Each
-    needs code-reviewer AND ux-reviewer, fix loop, then merge one at a time
-    (rebase each onto main before merging; they only touch their own
-    directory + one e2e spec, so conflicts are not expected).
-  - Rulings added this session: R23 (mock ownership), R24 (SHAP additivity
-    5e-3 + grammar additions), R25 (warm-up: no scoring while NaN).
-  - T-INFRA follow-ups pending (fold into T-NODERED's infra brief): `make
-    evaluate` must run scripts/faithfulness.py first (R24); `make setup`
-    should run `contracts-ts`; CI guard grep should be case-insensitive on
-    contents; §2.2 should list `contracts-ts`.
-- Reviews of this session live in the NEW scratchpad `reviews/`:
-  model-code-1/2, features-ci-code-2 (+Review 3), web-shell-verdicts.md
-  (code-2 + ux-2 both APPROVED, delivered inline).
-- Old worktrees wt-features-ci / wt-features-settings / wt-web-shell are
-  merged; remove them (`git worktree remove`) when convenient.
+- Phases 1–3 DONE. Merged into main (CI GREEN at 7f94834): T-INFRA,
+  T-CONTRACTS, T-DATA, T-FEATURES, T-REPLAY, T-WEB-SHELL, fix/infra-ci,
+  T-MODEL, T-SHAP (+fix/explain-ci), T-WEB-MOCKS (R23).
+- Rulings added this session: R23 (mock ownership), R24 (SHAP additivity
+  5e-3 + grammar), R25 (warm-up: no scoring while NaN). User rule: at most
+  5 concurrent subagents (8 GB RAM) — see memory max-five-agents.md.
+- Phase 4 in progress. Worktrees under the NEW scratchpad
+  /private/tmp/claude-501/-Users-anmolagarwal-iotAnalyticsLab-epm/af9e2a51-3cb6-469f-b450-ace4807a1d0a/scratchpad/
+  (reviews in `reviews/`, shared web brief in `briefs/web-common.md`,
+  screenshots in `shots/`). If that scratchpad is gone, `git worktree list`.
+  - feat/api (wt-api, 10 commits on main 010c057, 8 DIRTY files): T-API
+    build DONE; api-code-1 + api-security-1 both NEEDS_WORK; fix pass 1
+    was mid-way ("Now the tests for snapshot-after-seek, positional values,
+    and sparkline") — dirty: api/app.py, deps.py, routers/machines.py,
+    routers/plants.py, pipeline/consumer.py, store/pointintime.py + 2 more.
+    RESUME: backend-builder, same fix brief (both reviews), "continue from
+    the worktree state", then code-reviewer + security-reviewer re-review,
+    merge (rebase onto main first: base is 010c057, main moved with docs).
+  - feat/web-alert-feed (7 commits, 2 DIRTY: AlertCard.tsx, AlertFeed.tsx):
+    code-1 + ux-1 NEEDS_WORK; fix pass 1 mid-way ("AlertCard needs the
+    tabIndex prop" = roving tabindex work). RESUME: frontend-builder with
+    the same fix brief, continue; then re-review both; merge.
+  - feat/web-plant-floor (7 commits, clean): code-1 NEEDS_WORK (drop
+    `motion` from the initial bundle, −41 kB gz; use CSS/WAAPI for the
+    pulse); UX review never completed (stopped twice). RESUME: fix pass
+    (code-1 item) then code re-review + ux review; merge.
+  - feat/web-shap-viz (5 commits, clean): code-1 APPROVED; ux review never
+    completed. RESUME: ux-reviewer; merge on APPROVED.
+  - feat/web-machine-detail (6 commits, clean): build DONE, no reviews
+    yet. RESUME: code-reviewer + ux-reviewer; merge.
+  - feat/web-playback (0 commits, untracked web/src/features/playback/
+    partial files from a builder stopped early): RESUME: frontend-builder
+    with the T-WEB-PLAYBACK brief, "inspect and continue or restart".
+  - feat/web-whatif (clean, nothing started), feat/web-model-compare
+    (untracked stub dir from a killed builder): NOT STARTED.
+- Shell follow-ups (one `fix/web-shell-integration` frontend-builder task
+  after the features merge): web/e2e/smoke.spec.ts lines 39/42 (assert
+  machine-tile-* and alert-feed instead of placeholders); routes.tsx must
+  infer the plant from a deep-linked machine id (/machines/ims-01); pick
+  one owner for `floor-demo-link` (shell vs floor.grid); T-WEB-WHATIF
+  should reuse ShapWaterfall from shap-viz once merged.
+- T-INFRA follow-ups (fold into the T-NODERED infra brief): `make evaluate`
+  runs scripts/faithfulness.py first (R24); `make setup` runs contracts-ts;
+  CI bundle-guard grep case-insensitive on contents; §2.2 lists
+  contracts-ts; CI should assert the no-mock-in-prod test ran.
+- Orchestrator decisions still open (non-blocking): per-tick `top_features`
+  preview (API sends previews only after a machine's first alert); alert
+  feed not run-scoped while `state_at` is; T-DOCS ADRs for R21–R25.
 
-## Next after the in-flight three
-1. Merge order: fix/infra-ci (after 2 reviews) → feat/model → feat/web-mocks
-   → feat/shap (after review) → T-API (backend-builder; needs SHAP; code +
-   security review) → T-NODERED (infra-builder) → seven T-WEB-* (code + ux
-   each) → Phase 5 (T-WEB-E2E → T-PERF → T-DOCS → fresh-reader → final
-   review + codex audit) → Phase 6 tag v1.0.0.
-2. T-API brief must carry: model-code-1 handoff notes, T-SHAP report, the
-   warm-up NaN alert-suppression decision (first ~14.3 h of features are
-   NaN; suppress scoring until the vector is complete and expose it as
-   `MachineSummary.probability = null`), R10/R11/R12/R21.
+## Merge order when resuming
+feat/api (after fix + 2 re-reviews) → feat/web-shap-viz (after ux) →
+feat/web-machine-detail (after 2 reviews) → feat/web-plant-floor (fix + 2)
+→ feat/web-alert-feed (fix + 2) → playback → whatif → model-compare (each
+code + ux) → fix/web-shell-integration → T-NODERED (infra-builder; needs
+the live API) → Phase 5 (T-WEB-E2E → T-PERF → T-DOCS → fresh-reader →
+final review + codex audit) → Phase 6 tag v1.0.0. Rebase each branch onto
+main before merging; run its gate; `--no-ff`; push; `gh run list` green
+before the next merge. caffeinate was released at pause.
 
 ## Resume procedure
 1. `gh auth status`; `git status`; `git worktree list`; check each worktree
