@@ -20,9 +20,9 @@ The entry points downstream tasks use:
   :class:`~xpm.contracts.rest.ModelComparison`;
 * :func:`~xpm.explain.narrative.headline` — ``Alert.headline`` for the rail.
 
-There is **no calibrator** in this package and nothing here imports
-``sklearn.calibration``: the served model's own probability is the number every
-bar sums to (R16, ADR-016).
+There is **no calibrator** in this package, and nothing here imports one: the
+served model's own probability is the number every bar sums to (R16, ADR-016).
+``tests/model/test_registry.py`` greps this package to keep it that way.
 """
 
 from __future__ import annotations

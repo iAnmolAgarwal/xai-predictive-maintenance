@@ -339,8 +339,13 @@ class Explainer:
         return np.asarray(np.median(self._background.to_numpy(dtype=np.float64), axis=0))
 
     def probabilities(self, matrix: Float64Array) -> Float64Array:
-        """Served probabilities for a ``(rows, n_features)`` matrix (R16)."""
-        return _clip(model_evaluate.predict_proba(self._entry, self._model, matrix))
+        """Served probabilities for a ``(rows, n_features)`` matrix (R16).
+
+        The width is checked here rather than left to the model so a mis-shaped
+        vector fails with the feature contract in the message.
+        """
+        block = _as_matrix(matrix, self.n_features)
+        return _clip(model_evaluate.predict_proba(self._entry, self._model, block))
 
     def shap_rows(self, matrix: Float64Array) -> tuple[ShapRow, ...]:
         """SHAP values in probability space for every row of ``matrix``."""
