@@ -1,6 +1,6 @@
 # Orchestrator checkpoint (auto-maintained; read this first after /compact or resume)
 
-Updated: 2026-09-15 13:40 IST — RESUMED; Phase 3 review loop in flight.
+Updated: 2026-09-15 14:05 IST — Phase 3 review loop; disk-full incident recovered.
 
 ## Where we are
 - Phase 1, 2 DONE. Phase 3: T-FEATURES and T-REPLAY merged into main.
@@ -17,19 +17,21 @@ Updated: 2026-09-15 13:40 IST — RESUMED; Phase 3 review loop in flight.
   `/private/tmp/claude-501/-Users-anmolagarwal-iotAnalyticsLab-epm/af9e2a51-3cb6-469f-b450-ace4807a1d0a/scratchpad/reviews/`).
 - Worktrees still live under the OLD session scratchpad (`git worktree list`):
   - wt-features-ci / fix/features-ci (off main 702475a, 2 commits 8912960
-    bdad617, clean, no trailers): BUILD DONE, code review 1 IN FLIGHT. Rank tie test tolerant
+    bdad617): review 1 NEEDS_WORK (ULP test tautology, Linux proof missing);
+    fix pass 1 IN FLIGHT (backend-builder). Then re-review, merge FIRST. Rank tie test tolerant
     to float64 noise (RANK_RTOL=1e-9 scaled by running max |value|), ai4i
     golden regenerated (28 ranks moved, 0 values), ULP-perturbation tests,
     benchmark-disabled guard. Proven on x86-64 Linux in docker (pre-fix main
     fails, branch passes 581). Next: code-reviewer, then merge FIRST.
-  - wt-web-shell / feat/web-shell (20 commits on main, clean): fix pass 1
-    COMMITTED (14 fix commits, no builder report). Code review 2 + UX review 2
-    IN FLIGHT.
+  - wt-web-shell / feat/web-shell (20 commits on main, head 158be0a, clean):
+    APPROVED by code review 2 AND UX review 2 (see new scratchpad
+    reviews/web-shell-verdicts.md). Merge after fix/features-ci + settings.
   - wt-features-settings / fix/features-settings (4 commits on main, clean,
     rebased): APPROVED (old scratchpad features-settings-code-1.md). Merge
     right after fix/features-ci.
-  - wt-model / feat/model (6 commits daf0f43..9719642 on main, clean, no
-    trailers): T-MODEL BUILD DONE, code review 1 IN FLIGHT. Report in
+  - wt-model / feat/model (8 commits, head be20040, clean): review 1
+    NEEDS_WORK (top-level current symlink), fix pass 1 done, review 2 IN
+    FLIGHT. T-SHAP handoff notes are in reviews/model-code-1.md. Report in
     scratchpad/reviews/model-build-report.md (key deviations: plant level in
     registry path, grouped_time split rule, warm-up NaN drop, libomp on mac).
     Next: code-reviewer (check deviations against §3.7/R5/R16), then merge
@@ -50,6 +52,14 @@ Updated: 2026-09-15 13:40 IST — RESUMED; Phase 3 review loop in flight.
 5. Then Phase 4 per docs/plan/backend.md §5: T-SHAP, T-API, T-NODERED, seven
    T-WEB-* features (code + ux review each). Phase 5: T-WEB-E2E, T-PERF,
    T-DOCS, fresh-reader, final review + codex, tag v1.0.0.
+
+## Environment incident 2026-09-15
+- Host disk filled to 0 B during parallel docker/pytest runs. Reclaimed ~7 GB:
+  deleted extracted IMS copies from the old scratchpad datacache (kept
+  bearings.zip), docker builder/volume prune, brew/pip caches, stale
+  pytest tmp registries. Every builder/reviewer brief must now carry a disk
+  warning (no extra venvs, no docker volumes, delete scratch). OrbStack had
+  stopped; `orbctl start` fixed it.
 
 ## Invariants
 - Every Agent call: named agent type + `model: "opus"`.
