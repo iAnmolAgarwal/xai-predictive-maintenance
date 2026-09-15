@@ -15,7 +15,7 @@ import pytest
 
 from xpm.config import get_settings
 from xpm.contracts.settings import Settings
-from xpm.features.percentiles import SUPPORTED_ALGORITHMS, PercentileBank
+from xpm.features.percentiles import RANK_RTOL, SUPPORTED_ALGORITHMS, PercentileBank
 
 SAMPLES = 10_000
 TOLERANCE_PERCENTILE_POINTS = 1.0
@@ -27,6 +27,67 @@ def _settings() -> Settings:
 
 def _exact_rank(history: np.ndarray, value: float) -> float:
     return float(np.count_nonzero(history <= value)) / history.size * 100.0
+
+
+def _ranks(values: np.ndarray) -> np.ndarray:
+    """Replay a one-feature series and collect its ranks."""
+    bank = PercentileBank(1)
+    return np.array([float(bank.update(np.array([value]))[0]) for value in values])
+
+
+def test_ranks_survive_one_ulp_of_platform_noise() -> None:
+    """The CI failure this guards: a tie split by float64 reduction order.
+
+    ``air_temp_slope_4h`` produced two mathematically equal window slopes that
+    landed three ULPs apart between arm64 and x86-64, flipping one count and
+    moving a rank. The series below repeats its first half, so every value in
+    the second half ties exactly with one history entry; perturbing *only* the
+    history side reproduces the CI scenario, because the rank's comparison is
+    ``history <= value`` and a history entry nudged up falls out of the count
+    while the query it ties with stays put. No rank may move.
+
+    Only the ``up`` and ``alternating`` arms can split a tie: a history entry
+    nudged *below* the query it ties with is counted either way under
+    ``history <= value``, so ``down`` pins that benign direction instead.
+    """
+    generator = np.random.default_rng(20260915)
+    base = generator.normal(size=300)
+    # Structural repeats are what actually produces the ties: the same window
+    # contents give the same statistic twice.
+    base[150:] = base[:150]
+    history_side = slice(0, 150)
+
+    # Perturb the history half only, so each tie is split across the
+    # query/history boundary rather than moved wholesale.
+    up = base.copy()
+    up[history_side] = np.nextafter(base[history_side], np.inf)
+    down = base.copy()
+    down[history_side] = np.nextafter(base[history_side], -np.inf)
+    alternating = base.copy()
+    alternating[history_side] = np.where(
+        np.arange(150) % 2 == 0, up[history_side], down[history_side]
+    )
+
+    reference = _ranks(base)
+    for perturbed in (up, down, alternating):
+        assert not np.array_equal(perturbed, base)
+        np.testing.assert_array_equal(_ranks(perturbed), reference)
+
+
+def test_the_tie_band_does_not_swallow_distinct_values() -> None:
+    """A tolerance wide enough to hide a real difference would be a bug.
+
+    Values a thousand times further apart than ``RANK_RTOL`` must still rank
+    apart; values inside the band must tie.
+    """
+    warmup = _settings().features.percentile_warmup_samples
+    bank = PercentileBank(1)
+    for _ in range(warmup):
+        bank.update(np.array([1.0]))
+    outside = float(bank.update(np.array([1.0 - RANK_RTOL * 1000.0]))[0])
+    inside = float(bank.update(np.array([1.0 - RANK_RTOL / 1000.0]))[0])
+    assert outside < 100.0
+    assert inside == pytest.approx(100.0)
 
 
 def test_ranks_match_the_exact_empirical_percentile() -> None:
