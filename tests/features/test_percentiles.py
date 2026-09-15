@@ -40,21 +40,37 @@ def test_ranks_survive_one_ulp_of_platform_noise() -> None:
 
     ``air_temp_slope_4h`` produced two mathematically equal window slopes that
     landed three ULPs apart between arm64 and x86-64, flipping one count and
-    moving a rank from 196/223 to 197/223. Perturbing every value by a ULP in
-    the direction least favourable to the tie must change no rank at all.
+    moving a rank. The series below repeats its first half, so every value in
+    the second half ties exactly with one history entry; perturbing *only* the
+    history side reproduces the CI scenario, because the rank's comparison is
+    ``history <= value`` and a history entry nudged up falls out of the count
+    while the query it ties with stays put. No rank may move.
+
+    Only the ``up`` and ``alternating`` arms can split a tie: a history entry
+    nudged *below* the query it ties with is counted either way under
+    ``history <= value``, so ``down`` pins that benign direction instead.
     """
     generator = np.random.default_rng(20260915)
     base = generator.normal(size=300)
     # Structural repeats are what actually produces the ties: the same window
     # contents give the same statistic twice.
     base[150:] = base[:150]
+    history_side = slice(0, 150)
 
-    up = np.nextafter(base, np.inf)
-    down = np.nextafter(base, -np.inf)
-    alternating = np.where(np.arange(base.size) % 2 == 0, up, down)
+    # Perturb the history half only, so each tie is split across the
+    # query/history boundary rather than moved wholesale.
+    up = base.copy()
+    up[history_side] = np.nextafter(base[history_side], np.inf)
+    down = base.copy()
+    down[history_side] = np.nextafter(base[history_side], -np.inf)
+    alternating = base.copy()
+    alternating[history_side] = np.where(
+        np.arange(150) % 2 == 0, up[history_side], down[history_side]
+    )
 
     reference = _ranks(base)
     for perturbed in (up, down, alternating):
+        assert not np.array_equal(perturbed, base)
         np.testing.assert_array_equal(_ranks(perturbed), reference)
 
 
