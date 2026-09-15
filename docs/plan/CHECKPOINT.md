@@ -23,6 +23,15 @@ Updated: 2026-09-15 18:30 IST — usage limit hit at ~17:40 and reset at 18:20; 
     a slot frees: playback, whatif, model-compare (worktrees exist, clean;
     model-compare has an untracked stub dir to inspect). Cap concurrent
     builders at ~5 to avoid another session-limit hit.
+  - 18:55 status: BUILT + awaiting review: plant-floor (7 commits; code +
+    ux reviews were stopped for the cap, relaunch both), shap-viz (5
+    commits; code review stopped, relaunch code + ux). alert-feed (6
+    commits): code + ux reviews IN FLIGHT. machine-detail: build IN FLIGHT.
+    T-API (feat/api, 7 commits, rebased on main): code + security reviews
+    IN FLIGHT. NOT STARTED: playback, whatif, model-compare.
+    Shell follow-up after feature merges: web/e2e/smoke.spec.ts lines 39/42
+    assert the placeholder tiles and empty rail, which registered slots
+    replace (assert machine-tile-* and alert-feed instead).
   - Seven T-WEB-* frontend-builders, one per worktree
     wt-web-{plant-floor,machine-detail,shap-viz,alert-feed,playback,whatif,
     model-compare} on branches feat/web-<name> off main (post web-mocks).
