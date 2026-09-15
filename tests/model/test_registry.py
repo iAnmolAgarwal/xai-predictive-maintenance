@@ -16,6 +16,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from xpm.config import get_settings
+from xpm.contracts.common import PLANT_IDS
 from xpm.features.registry import feature_names, n_features
 from xpm.model import registry, train
 from xpm.model.registry import ModelVersion, RegistryError
@@ -276,3 +278,57 @@ def test_background_parquet_is_readable_as_a_frame(trained_root: Path) -> None:
     frame = registry.load_background(entry)
     assert isinstance(frame, pd.DataFrame)
     assert not frame.isna().to_numpy().any()
+
+
+def _register_both_plants(root: Path, *, default_first: bool) -> None:
+    """Register the default plant and the other plant in the given order.
+
+    The default plant is trained for real from the tiny fixture; the other plant
+    is registered through :func:`registry.set_current` — the exact call
+    ``train.train_plant`` makes at the end of a run — because its 198-feature
+    model cannot be built from the 154-feature AI4I fixture.
+    """
+    settings = get_settings()
+    other = next(plant for plant in PLANT_IDS if plant != settings.plants.default)
+
+    def train_default() -> None:
+        train.train_plant(
+            settings.plants.default, matrix=tiny_matrix(), root=root, data_sha256="0" * 64
+        )
+
+    def register_other() -> None:
+        registry.set_current(root, other, settings.model.served, registry.FIRST_VERSION)
+
+    steps = [train_default, register_other] if default_first else [register_other, train_default]
+    for step in steps:
+        step()
+
+
+@pytest.mark.parametrize("default_first", [True, False])
+def test_top_level_current_tracks_the_default_plant_whatever_the_order(
+    tmp_path: Path, default_first: bool
+) -> None:
+    """``make train`` trains every plant; the top-level link must not drift.
+
+    It names ``plants.default``'s served model, so training order — ai4i then
+    ims, or the reverse — cannot change what a reader following
+    ``models/registry/current`` gets.
+    """
+    settings = get_settings()
+    other = next(plant for plant in PLANT_IDS if plant != settings.plants.default)
+    _register_both_plants(tmp_path, default_first=default_first)
+
+    served = registry.resolve_version(tmp_path, settings.plants.default)
+    top = (tmp_path / registry.CURRENT_LINK).readlink()
+    assert not top.is_absolute()
+    assert top == Path(settings.plants.default) / served.family / served.version
+    # Each plant keeps its own pointer regardless.
+    assert (tmp_path / settings.plants.default / registry.CURRENT_LINK).is_symlink()
+    assert (tmp_path / other / registry.CURRENT_LINK).is_symlink()
+
+
+def test_a_non_default_plant_alone_never_writes_the_top_level_link(tmp_path: Path) -> None:
+    settings = get_settings()
+    other = next(plant for plant in PLANT_IDS if plant != settings.plants.default)
+    registry.set_current(tmp_path, other, settings.model.served, registry.FIRST_VERSION)
+    assert not (tmp_path / registry.CURRENT_LINK).is_symlink()

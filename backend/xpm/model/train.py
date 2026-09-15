@@ -308,7 +308,9 @@ def train_plant(
     served = resolved.model.served
     for item in trained:
         if item.family == served:
-            registry.set_current(registry_path, plant_id, served, item.entry.version)
+            registry.set_current(
+                registry_path, plant_id, served, item.entry.version, settings=resolved
+            )
     return trained
 
 

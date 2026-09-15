@@ -39,7 +39,10 @@ models/registry/
 
 One directory per plant because the two plants have different channels and
 therefore different feature vectors — 154 features for `ai4i`, 198 for `ims`.
-`current` is a relative symlink at both levels, so a rollback is one command:
+The top-level `current` follows `plants.default` in `config/settings.yaml`, not
+the plant trained last, so `make train` leaves it on the same plant whatever
+order the plants are trained in. `current` is a relative symlink at both levels,
+so a rollback is one command:
 
 ```sh
 ln -sfn lgbm/1.0.0 models/registry/ai4i/current

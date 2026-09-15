@@ -23,7 +23,8 @@ the plan: §3.7's own ``manifest.json`` carries ``plant_id`` and §3.4.1's
 ``ModelInfo`` is per plant, so two plants cannot share ``lgbm/1.0.0``. The
 ``current`` symlink is kept at both levels so ``ln -sfn`` is still the whole
 rollback procedure and so the compose bootstrap's "train if
-``models/registry/current`` is absent" check still works.
+``models/registry/current`` is absent" check still works. The top-level link
+tracks ``plants.default`` only, so training order cannot move it.
 
 **No calibrator, of any kind, is ever written here** (R16, ADR-016):
 :func:`artefact_names` is the complete artefact set and
@@ -49,8 +50,9 @@ from typing import Any, Final, Literal
 
 import pandas as pd
 
-from xpm.config import models_dir, project_root
+from xpm.config import get_settings, models_dir, project_root
 from xpm.contracts.common import MODEL_KINDS, ModelKind, PlantId
+from xpm.contracts.settings import Settings
 from xpm.features.registry import feature_meta_payload, feature_names, n_features
 
 __all__ = [
@@ -295,14 +297,28 @@ def next_version(root: Path, plant_id: PlantId, family: ModelKind, bump: Version
     return bump_version(existing[-1], bump)
 
 
-def set_current(root: Path, plant_id: PlantId, family: ModelKind, version: str) -> None:
-    """Point ``<plant>/current`` (and the top-level pointer) at a version.
+def set_current(
+    root: Path,
+    plant_id: PlantId,
+    family: ModelKind,
+    version: str,
+    *,
+    settings: Settings | None = None,
+) -> None:
+    """Point ``<plant>/current`` at a version, and the top-level link too.
+
+    The top-level pointer is rewritten **only for ``plants.default``**, so that
+    it names the default plant's served model whatever order the plants were
+    trained in; ``train.py --plant all`` would otherwise leave it aimed at
+    whichever plant happened to be trained last.
 
     Both links are **relative**, so a registry directory stays valid when it is
     bind-mounted into a container at a different absolute path.
     """
+    resolved = settings if settings is not None else get_settings()
     _relink(root / plant_id / CURRENT_LINK, Path(family) / version)
-    _relink(root / CURRENT_LINK, Path(plant_id) / family / version)
+    if plant_id == resolved.plants.default:
+        _relink(root / CURRENT_LINK, Path(plant_id) / family / version)
 
 
 def _relink(link: Path, target: Path) -> None:
