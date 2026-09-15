@@ -102,6 +102,36 @@ describe('the fixed timeline', () => {
     session.socket.close();
   });
 
+  it('sends no risk update for a machine that has no score (R25)', async () => {
+    const session = connect('plant_id=ims&mock_scenario=quiet');
+    const snapshot = await waitForFrame(session, 'snapshot');
+    // `ims-04` is the designed offline machine: the snapshot still lists it with a
+    // null probability, and the plant floor renders that as "—".
+    expect(snapshot.machines).toHaveLength(4);
+    expect(
+      snapshot.machines.find((machine) => machine.machine_id === 'ims-04')?.probability,
+    ).toBeNull();
+
+    // Four live ticks in, it has still never been named in a `risk` frame —
+    // `RiskUpdate.probability` is non-nullable, so a 0 there would be a lie.
+    await new Promise((resolve) => setTimeout(resolve, TICK_MS * 4));
+    const riskFrames = session.frames.filter((frame) => frame.type === 'risk');
+    expect(riskFrames.length).toBeGreaterThan(2);
+    for (const frame of riskFrames) {
+      expect(frame.updates.map((update) => update.machine_id)).not.toContain('ims-04');
+      expect(frame.updates).toHaveLength(3);
+      for (const update of frame.updates) expect(typeof update.probability).toBe('number');
+    }
+
+    // And the REST surface keeps reporting the same machine as unscored.
+    const summaries = (await (await fetch('/api/machines?plant_id=ims')).json()) as Array<{
+      machine_id: string;
+      probability: number | null;
+    }>;
+    expect(summaries.find((row) => row.machine_id === 'ims-04')?.probability).toBeNull();
+    session.socket.close();
+  }, 10_000);
+
   it('paces the heartbeat at api.ws_ping_seconds', () => {
     expect(PING_EVERY_TICKS * TICK_MS).toBe(WS_PING_SECONDS * 1000);
     expect(makeConfig().values['api.ws_ping_seconds']).toBe(WS_PING_SECONDS);

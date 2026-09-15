@@ -412,7 +412,53 @@ describe('PUT /api/config', () => {
   });
 });
 
+describe('an unknown plant_id', () => {
+  it('422s instead of silently answering for the default plant', async () => {
+    for (const path of [
+      '/api/health?plant_id=nowhere',
+      '/api/machines?plant_id=nowhere',
+      `/api/state_at?plant_id=nowhere&dataset_ts=${datasetTsFor('ai4i', CURRENT_TICK)}`,
+    ]) {
+      const { status, body } = await get<Problem>(path);
+      expect(status).toBe(422);
+      expect(body.type).toBe('https://xpm.local/errors/unprocessable');
+      expect(body.detail).toBe('nowhere');
+    }
+
+    const command = await send<Problem>('POST', '/api/replay/command', {
+      schema_version: 1,
+      command: 'pause',
+      plant_id: 'nowhere',
+      request_id: 'req_0009',
+    });
+    expect(command.status).toBe(422);
+    expect(command.contentType).toContain('application/problem+json');
+  });
+
+  it('still defaults an absent plant_id to ai4i', async () => {
+    const { status, body } = await get<{ plants_available: string[] }>('/api/health');
+    expect(status).toBe(200);
+    expect(body.plants_available).toEqual(['ai4i', 'ims']);
+  });
+});
+
 describe('POST /api/replay/command', () => {
+  it('serves alerts under the run the restart minted', async () => {
+    const before = await get<Alert>(`/api/alerts/${DEMO_ALERT_ID}`);
+    expect(before.body.run_id).toBe(RUN_IDS[0]);
+
+    await send<ReplayState>('POST', '/api/replay/command', {
+      schema_version: 1,
+      command: 'restart',
+      request_id: 'req_0008',
+    });
+
+    const after = await get<Alert>(`/api/alerts/${DEMO_ALERT_ID}`);
+    expect(after.body.run_id).toBe(RUN_IDS[1]);
+    const page = await get<AlertPage>('/api/alerts?limit=5');
+    expect(page.body.items.every((alert) => alert.run_id === RUN_IDS[1])).toBe(true);
+  });
+
   it('mints a new run id on restart and on nothing else', async () => {
     const paused = await send<ReplayState>('POST', '/api/replay/command', {
       schema_version: 1,

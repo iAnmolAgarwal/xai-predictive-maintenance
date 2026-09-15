@@ -100,7 +100,17 @@ const BACKPRESSURE_TICK = 10;
 /** Ticks between heartbeats: `api.ws_ping_seconds` at one tick per `TICK_MS`. */
 export const PING_EVERY_TICKS = Math.round((WS_PING_SECONDS * 1000) / TICK_MS);
 
-const plantIdFrom = (value: string | null): PlantId => (value === 'ims' ? 'ims' : 'ai4i');
+/** `null` (absent) means the default plant; anything else must be a real plant id. */
+const plantIdFrom = (value: string | null): PlantId | null => {
+  if (value === null || value === '' || value === 'ai4i') return 'ai4i';
+  return value === 'ims' ? 'ims' : null;
+};
+
+/** The socket has no error channel before `hello`, so it falls back to the default. */
+const socketPlantId = (value: string | null): PlantId => plantIdFrom(value) ?? 'ai4i';
+
+const unknownPlant = (value: string | null, instance: string): HttpResponse<Problem> =>
+  problem(422, 'unprocessable', 'Unknown plant_id', String(value), instance);
 
 /* ── RFC-9457 problem responses ─────────────────────────────────────────────── */
 
@@ -130,14 +140,12 @@ const notFound = (title: string, detail: string, instance: string): HttpResponse
 /* ── REST ───────────────────────────────────────────────────────────────────── */
 
 export const restHandlers = [
-  http.get('/api/health', ({ request }) =>
-    HttpResponse.json(
-      makeHealth(
-        plantIdFrom(new URL(request.url).searchParams.get('plant_id')),
-        CURRENT_TICK,
-      ),
-    ),
-  ),
+  http.get('/api/health', ({ request }) => {
+    const raw = new URL(request.url).searchParams.get('plant_id');
+    const plantId = plantIdFrom(raw);
+    if (plantId === null) return unknownPlant(raw, '/api/health');
+    return HttpResponse.json(makeHealth(plantId, CURRENT_TICK));
+  }),
   http.get('/api/config', () => HttpResponse.json(makeConfig())),
 
   http.put('/api/config', async ({ request }) => {
@@ -170,6 +178,8 @@ export const restHandlers = [
   http.post('/api/replay/command', async ({ request }) => {
     const command = (await request.json()) as ReplayCommand;
     const plantId = plantIdFrom(command.plant_id ?? null);
+    if (plantId === null)
+      return unknownPlant(command.plant_id ?? null, '/api/replay/command');
     switch (command.command) {
       case 'play':
         setReplay({ playing: true });
@@ -195,7 +205,9 @@ export const restHandlers = [
   }),
 
   http.get('/api/machines', ({ request }) => {
-    const plantId = plantIdFrom(new URL(request.url).searchParams.get('plant_id'));
+    const raw = new URL(request.url).searchParams.get('plant_id');
+    const plantId = plantIdFrom(raw);
+    if (plantId === null) return unknownPlant(raw, '/api/machines');
     return HttpResponse.json(makeMachineSummaries(plantId, CURRENT_TICK));
   }),
 
@@ -289,7 +301,9 @@ export const restHandlers = [
         '/api/state_at',
       );
     }
-    return HttpResponse.json(makeStateAt(plantIdFrom(query.get('plant_id')), datasetTs));
+    const plantId = plantIdFrom(query.get('plant_id'));
+    if (plantId === null) return unknownPlant(query.get('plant_id'), '/api/state_at');
+    return HttpResponse.json(makeStateAt(plantId, datasetTs));
   }),
 
   http.get('/api/alerts', ({ request }) => {
@@ -377,7 +391,7 @@ function scenariosFor(url: URL): Set<string> {
 /** Re-send `snapshot` to every client, in its own plant — required after a seek. */
 function broadcastSnapshot(tick: number): void {
   for (const client of socketLink.clients) {
-    const plantId = plantIdFrom(client.url.searchParams.get('plant_id'));
+    const plantId = socketPlantId(client.url.searchParams.get('plant_id'));
     client.send(JSON.stringify(snapshotFrame(plantId, tick)));
   }
 }
@@ -395,7 +409,7 @@ function snapshotFrame(plantId: PlantId, tick: number): ServerFrame {
 }
 
 export const wsHandler = socketLink.addEventListener('connection', ({ client }) => {
-  const plantId = plantIdFrom(client.url.searchParams.get('plant_id'));
+  const plantId = socketPlantId(client.url.searchParams.get('plant_id'));
   const scenarios = scenariosFor(client.url);
   const plant = makePlant(plantId);
   const machineIds = machineIdsFor(plantId);
@@ -427,12 +441,17 @@ export const wsHandler = socketLink.addEventListener('connection', ({ client }) 
         values: makeChannelValues(plantId, machineId, tick),
       })),
     });
-    const summaries = makeMachineSummaries(plantId, tick);
+    // R25: an unscored machine (warm-up, or a gap in its feed) gets NO
+    // `RiskUpdate` — `RiskUpdate.probability` is non-nullable, and coercing the
+    // missing score to 0 would flip the tile's "—" ring to a confident 0 %.
+    const scored = makeMachineSummaries(plantId, tick).filter(
+      (summary) => summary.probability !== null,
+    );
     send({
       type: 'risk',
       plant_id: plantId,
       ts: new Date().toISOString(),
-      updates: summaries.map((summary) => ({
+      updates: scored.map((summary) => ({
         machine_id: summary.machine_id,
         dataset_ts: datasetTsFor(plantId, tick),
         probability: summary.probability ?? 0,
