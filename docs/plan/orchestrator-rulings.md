@@ -163,3 +163,19 @@ T-MODEL's machine-generated file). (Review 2 item 16.)
   branch after T-FEATURES merges (T-CONTRACTS/pyproject ownership).
 - `EWMA_WINDOW_DIVISOR = 4` stays a module constant; not a settings leaf.
 - Docs (T-DOCS, ADR) must record why tdigest was abandoned, with the numbers.
+
+## R23 — Mock-server ownership in Phase 4 (2026-09-15)
+- `web/src/mock/**` stays a single owner. Before the seven `T-WEB-*` feature
+  tasks start, a short task `T-WEB-MOCKS` (frontend-builder, branch
+  `feat/web-mocks`) extends the MSW mock to the full REST surface of
+  frontend.md §3.1 (`/api/telemetry`, `/api/risk`,
+  `/api/alerts/{id}/compare`, `/api/machines/{id}/importance`,
+  `/api/state_at`, `POST /api/whatif`, `GET /api/models`, `PUT /api/config`,
+  `?model=rf` on `/explanation`) and the WebSocket `alert`, `explanation`,
+  `replay_state`, `config` and `error` frames, all contract-faithful and
+  deterministic (seeded), with a synthetic alert firing on a fixed tick.
+- Phase-4 feature tasks never edit `web/src/mock/**`. In component tests they
+  may override handlers per test with `server.use(...)`; their Playwright spec
+  runs against the shared mock as shipped by `T-WEB-MOCKS`.
+- Mock fixtures are the frontend's test data only; nothing in `web/src/mock/`
+  ships in a production bundle (frontend.md §1.1 guard stays in force).
