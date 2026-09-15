@@ -149,10 +149,37 @@ def test_feature_defaults(defaults: Settings) -> None:
     assert features.min_window_coverage == 0.6
     assert features.percentile_levels == [50, 75, 90, 95, 99]
     assert features.percentile_warmup_samples == 48
-    assert features.percentile_algorithm == "tdigest"
+    assert features.percentile_algorithm == "exact"
     assert features.percentile_compression == 200
     assert features.streak_percentile == 95
     assert features.streak_min_hours == 1.0
+
+
+def test_percentile_algorithm_accepts_the_deprecated_alias(
+    pristine_env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """R22: ``tdigest`` still loads; it names the same exact-rank backend."""
+    raw = yaml.safe_load(settings_file().read_text(encoding="utf-8"))
+    raw["features"]["percentile_algorithm"] = "tdigest"
+    aliased = tmp_path / "settings.yaml"
+    aliased.write_text(yaml.safe_dump(raw), encoding="utf-8")
+    monkeypatch.setenv(CONFIG_FILE_ENV, str(aliased))
+    get_settings.cache_clear()
+    assert get_settings().features.percentile_algorithm == "tdigest"
+
+
+def test_unknown_percentile_algorithm_is_rejected(
+    pristine_env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Anything outside the closed literal fails at load, not at first rank."""
+    raw = yaml.safe_load(settings_file().read_text(encoding="utf-8"))
+    raw["features"]["percentile_algorithm"] = "p2"
+    broken = tmp_path / "settings.yaml"
+    broken.write_text(yaml.safe_dump(raw), encoding="utf-8")
+    monkeypatch.setenv(CONFIG_FILE_ENV, str(broken))
+    get_settings.cache_clear()
+    with pytest.raises(ValidationError):
+        get_settings()
 
 
 def test_model_defaults(defaults: Settings) -> None:

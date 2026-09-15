@@ -200,8 +200,25 @@ class FeaturesSettings(SettingsSection):
     min_window_coverage: float = Field(ge=0.0, le=1.0)
     percentile_levels: list[Percentile]
     percentile_warmup_samples: int = Field(ge=1)
-    percentile_algorithm: str
-    percentile_compression: int = Field(ge=1)
+    percentile_algorithm: Literal["exact", "tdigest"] = Field(
+        default="exact",
+        description=(
+            "Percentile backend. Both spellings select the same exact-rank "
+            "estimator: the t-digest sketch was measured at ~773 us per cdf "
+            "call, ~38 rows/s against a 5 000 rows/s floor, and was dropped "
+            '(R22). "tdigest" survives only as a deprecated alias for '
+            "configs written before that measurement."
+        ),
+    )
+    percentile_compression: int = Field(
+        ge=1,
+        description=(
+            "Rows the per-machine history matrix is allocated and grown by. "
+            "The name is the t-digest one it was written for; with the "
+            "exact-rank backend (R22) it governs allocation granularity, not "
+            "accuracy."
+        ),
+    )
     streak_percentile: Percentile
     streak_min_hours: float = Field(ge=0.0)
 

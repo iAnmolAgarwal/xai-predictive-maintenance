@@ -59,8 +59,8 @@ features:
   min_window_coverage: 0.6     # 1.0 is strict and nulls features after any gap; 0.0 never nulls
   percentile_levels: [50, 75, 90, 95, 99]  # patchable at runtime; 95 is what the assignment sentence quotes
   percentile_warmup_samples: 48  # 48 samples = 4 h at the AI4I cadence; lower gives noisier percentiles
-  percentile_algorithm: tdigest  # exact percentiles need unbounded memory per machine
-  percentile_compression: 200    # higher is more accurate and larger; 100 is the usual floor
+  percentile_algorithm: exact  # "tdigest" is a deprecated alias for the same exact-rank backend (R22)
+  percentile_compression: 200    # history-matrix growth block: larger reallocates less often and wastes more
   streak_percentile: 95        # the percentile the "consecutive hours" sentence is measured against
   streak_min_hours: 1.0        # raise it to stop short blips being framed as streaks
 

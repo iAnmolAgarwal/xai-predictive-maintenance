@@ -58,8 +58,8 @@ features:
   min_window_coverage: 0.6     # <60 % of expected samples in a window -> feature is null
   percentile_levels: [50, 75, 90, 95, 99]  # percentiles tracked per (machine, feature)
   percentile_warmup_samples: 48  # below this the percentile is null, never 0
-  percentile_algorithm: tdigest  # streaming percentile estimator
-  percentile_compression: 200    # t-digest compression parameter
+  percentile_algorithm: exact  # exact ranks: the t-digest sketch cost ~773 us per cdf call (R22)
+  percentile_compression: 200    # rows the per-machine history matrix grows by when it fills
   streak_percentile: 95        # "consecutive hours above its Nth percentile"
   streak_min_hours: 1.0        # below this the consecutive framing is not used
 
