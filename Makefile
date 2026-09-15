@@ -13,7 +13,7 @@ PULL ?=
 # `unar`/`7z` extractors the IMS archive needs.
 XPM_DATA_IMAGE ?= xpm-data:local
 
-.PHONY: help setup data data-image data-ims contracts contracts-check train \
+.PHONY: help setup data data-image data-ims contracts contracts-ts contracts-check train \
         evaluate lint typecheck test e2e dev down check media
 
 help:  ## List the available targets
@@ -50,8 +50,15 @@ data-ims:  ## Fetch and process the NASA IMS dataset (1.0 GB download) (T-DATA)
 
 contracts:  ## Regenerate contracts/*.json and the frontend's TypeScript types (T-CONTRACTS)
 	uv run python scripts/export_openapi.py
-	pnpm -C web exec openapi-typescript ../contracts/openapi.json -o src/contracts/api.ts
 	uv run python scripts/export_ws_schema.py
+	$(MAKE) contracts-ts
+
+# web/src/contracts/{api,ws}.ts are generated and git-ignored (R15), so every
+# frontend lint, typecheck, test and build needs them made first. Split out of
+# `contracts` because CI's web job has no Python environment to re-export the
+# JSON with, only the committed artefacts.
+contracts-ts:  ## Generate the frontend types from the committed contract JSON
+	pnpm -C web exec openapi-typescript ../contracts/openapi.json -o src/contracts/api.ts
 	pnpm -C web exec json2ts -i ../contracts/ws-schema.json -o src/contracts/ws.ts --additionalProperties false
 
 # Every step below is &&-chained so a failing export or a non-empty diff is the
