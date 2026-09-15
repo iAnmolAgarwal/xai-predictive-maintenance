@@ -51,14 +51,46 @@ export const RF_BASE_VALUE = 0.0917;
 /** Share of the base→probability gap carried by the top-k of a generated alert. */
 const TOP_K_SHARE = 0.92;
 
+/**
+ * Rescale a top-k to carry `TOP_K_SHARE` of the base→probability gap in TOTAL
+ * MAGNITUDE. Scaling by the signed sum (as an earlier version did) makes the
+ * factor negative whenever the down-features outweigh the up-features, which
+ * silently inverts every sign in the explanation; dividing by Σ|shap| and taking
+ * the gap's magnitude leaves each contribution's sign exactly where the feature's
+ * declared direction put it. The residual goes to `other_contributions_shap`, so
+ * the waterfall still closes to the last bit.
+ */
+function rescale(entries: Weighted[], base: number, probability: number): Weighted[] {
+  const magnitude = entries.reduce((sum, entry) => sum + Math.abs(entry.shap), 0);
+  if (magnitude === 0) return entries.map((entry) => ({ meta: entry.meta, shap: 0 }));
+  const scale = (Math.abs(probability - base) * TOP_K_SHARE) / magnitude;
+  return entries.map((entry) => ({ meta: entry.meta, shap: entry.shap * scale }));
+}
+
 /* ── Number and clause rendering ───────────────────────────────────────────── */
 
-/** Fixed-precision, trailing zeros trimmed, so a value renders identically forever. */
+function trimZeros(rendered: string): string {
+  return rendered.includes('.') ? rendered.replace(/\.?0+$/, '') : rendered;
+}
+
+/** Thousands separators without `Intl`, so the rendering is locale-independent. */
+function group(digits: string): string {
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/**
+ * `backend/xpm/explain/templates.py:format_number` rendered in TypeScript: comma
+ * grouping at 1000, two decimals above 1, and three SIGNIFICANT digits below it
+ * so a band energy prints `0.0004 g²/Hz` rather than collapsing to `0`. Trailing
+ * zeros are trimmed and scientific notation is never produced, so every value in
+ * the catalogue renders identically forever.
+ */
 export function formatNumber(value: number): string {
   const abs = Math.abs(value);
-  const digits = abs >= 1000 ? 0 : abs >= 10 ? 1 : abs >= 1 ? 2 : 3;
-  const fixed = value.toFixed(digits);
-  return fixed.includes('.') ? fixed.replace(/\.?0+$/, '') : fixed;
+  if (abs >= 1000) return group(value.toFixed(0));
+  if (abs >= 1) return trimZeros(value.toFixed(2));
+  if (abs === 0) return '0';
+  return trimZeros(value.toPrecision(3));
 }
 
 function withUnit(value: number, unit: string | null): string {
@@ -103,9 +135,15 @@ export function renderClause(plantId: PlantId, meta: FeatureMeta): string {
 
   switch (meta.framing) {
     case 'percentile':
+      // No rank yet (too little history): the clause drops the percentile phrase
+      // rather than inventing a median, which `?? 50` would have rendered.
+      if (meta.percentile === null)
+        return up
+          ? `${display} over the last ${window} sat at ${value}, with no rank over this machine's own history yet`
+          : `${display} over the last ${window} fell to ${value}, with no rank over this machine's own history yet`;
       return up
-        ? `${display} over the last ${window} sat at the ${ordinal(meta.percentile ?? 50)} percentile of this machine's own history (${value})`
-        : `${display} over the last ${window} fell to the ${ordinal(meta.percentile ?? 50)} percentile of this machine's own history (${value})`;
+        ? `${display} over the last ${window} sat at the ${ordinal(meta.percentile)} percentile of this machine's own history (${value})`
+        : `${display} over the last ${window} fell to the ${ordinal(meta.percentile)} percentile of this machine's own history (${value})`;
     case 'consecutive':
       return up
         ? `${display} stayed above its ${meta.streak_percentile}th percentile for ${formatNumber(meta.consecutive_hours ?? 0)} consecutive hours (peaking at ${value})`
@@ -126,6 +164,17 @@ function displayLength(plantId: PlantId, meta: FeatureMeta): number {
   return (channelSpec(plantId, meta.channel)?.display_name ?? meta.display_name).length;
 }
 
+/**
+ * R24: `ShapContribution.direction` is the SIGN of the SHAP value — it drives the
+ * ▲/▼ glyph and the side of the force plot, and the waterfall bar's side comes
+ * from `shap` itself, so the two can never be allowed to disagree. The clause
+ * wording keeps using the feature's own declared direction, which R24 allows to
+ * differ.
+ */
+export function directionOf(shap: number): ShapContribution['direction'] {
+  return shap >= 0 ? 'up' : 'down';
+}
+
 function toContribution(
   plantId: PlantId,
   meta: FeatureMeta,
@@ -143,7 +192,7 @@ function toContribution(
     framing: meta.framing,
     consecutive_hours: meta.consecutive_hours,
     threshold: meta.threshold,
-    direction: meta.direction,
+    direction: directionOf(shap),
     sentence: renderClause(plantId, meta),
   };
 }
@@ -234,16 +283,21 @@ function demoWeights(alert: Alert, kind: ModelKind): Weighted[] {
       shap: Number(((meta.demo_shap ?? 0) * (0.55 + random() * 0.9)).toFixed(4)),
     }));
     const extra = catalogFor(alert.plant_id)[pinned.length];
-    if (extra)
-      entries.push({ meta: extra, shap: Number((0.02 + random() * 0.05).toFixed(4)) });
+    if (extra) {
+      // The promoted feature pushes the probability the way the feature itself
+      // points: a `down` feature may not arrive with a positive SHAP.
+      const magnitude = Number((0.02 + random() * 0.05).toFixed(4));
+      entries.push({
+        meta: extra,
+        shap: extra.direction === 'down' ? -magnitude : magnitude,
+      });
+    }
   }
   if (isHeadlineAlert(alert.alert_id)) return entries;
 
   const base = kind === 'lgbm' ? LGBM_BASE_VALUE : RF_BASE_VALUE;
   const probability = kind === 'lgbm' ? alert.probability : rfProbabilityFor(alert);
-  const total = entries.reduce((sum, entry) => sum + entry.shap, 0);
-  const scale = total === 0 ? 0 : ((probability - base) * TOP_K_SHARE) / total;
-  return entries.map((entry) => ({ meta: entry.meta, shap: entry.shap * scale }));
+  return rescale(entries, base, probability);
 }
 
 function generatedWeights(alert: Alert, kind: ModelKind): Weighted[] {
@@ -261,10 +315,7 @@ function generatedWeights(alert: Alert, kind: ModelKind): Weighted[] {
   });
   const base = kind === 'lgbm' ? LGBM_BASE_VALUE : RF_BASE_VALUE;
   const probability = kind === 'lgbm' ? alert.probability : rfProbabilityFor(alert);
-  const target = (probability - base) * TOP_K_SHARE;
-  const total = raw.reduce((sum, entry) => sum + entry.shap, 0);
-  const scale = total === 0 ? 0 : target / total;
-  return raw.map((entry) => ({ meta: entry.meta, shap: entry.shap * scale }));
+  return rescale(raw, base, probability);
 }
 
 function weightsFor(alert: Alert, kind: ModelKind): Weighted[] {
@@ -478,11 +529,13 @@ export function makeWhatIf(alert: Alert, request: WhatIfRequest): WhatIfResponse
     const meta = featureMeta(plantId, contribution.feature);
     const delta = override - (contribution.value ?? 0);
     const shap = contribution.shap + (gradients[contribution.feature] ?? 0) * delta;
-    if (!meta) return { ...contribution, shap, value: override };
+    const direction = directionOf(shap);
+    if (!meta) return { ...contribution, shap, direction, value: override };
     const moved: FeatureMeta = { ...meta, value: override };
     return {
       ...contribution,
       shap,
+      direction,
       value: override,
       sentence: renderClause(plantId, moved),
     };

@@ -383,6 +383,17 @@ function windowLabel(hours: number): string {
   return `${hours} h`;
 }
 
+/**
+ * The nominal band of a generated `std` feature, as a fraction of the source
+ * channel's nominal span: a dispersion that small is normal, one that large is
+ * not. `threshold` framing asserts a REAL crossing (R24), so the ceiling is what
+ * an `up` feature sits above and the floor is what a `down` feature sits below —
+ * the value is placed on the side its direction claims, never inside the band.
+ */
+const STD_BAND_CEILING = 0.06;
+const STD_BAND_FLOOR = 0.01;
+const STD_CROSSING = 0.25;
+
 function buildCatalog(plantId: PlantId): FeatureMeta[] {
   const channels = channelsFor(plantId);
   const spanOf = (name: string): number => {
@@ -404,19 +415,25 @@ function buildCatalog(plantId: PlantId): FeatureMeta[] {
       const feature = `${channel.name}${spec.suffix}`;
       if (taken.has(feature)) continue;
       const skew = ((index + 1) * 17) % 7;
+      const direction = skew % 3 === 0 ? 'down' : 'up';
+      // A `std` feature is a dispersion, so it is measured against the dispersion
+      // band, not against the channel's own mid-scale.
+      const edge = span * (direction === 'down' ? STD_BAND_FLOOR : STD_BAND_CEILING);
+      const crossed =
+        direction === 'down' ? edge * (1 - STD_CROSSING) : edge * (1 + STD_CROSSING);
       generated.push({
         feature,
         display_name: `${channel.display_name} — ${spec.label} over ${windowLabel(spec.window)}`,
         channel: channel.name,
         unit: channel.unit === '' ? null : channel.unit,
-        value: spec.stat === 'std' ? span * 0.04 : mid + span * (skew / 40),
+        value: spec.stat === 'std' ? crossed : mid + span * (skew / 40),
         percentile: 12 + skew * 11,
         window_hours: spec.window,
         stat: spec.stat,
         framing: spec.framing,
-        direction: skew % 3 === 0 ? 'down' : 'up',
+        direction,
         consecutive_hours: null,
-        threshold: spec.framing === 'threshold' ? mid + span * 0.3 : null,
+        threshold: spec.framing === 'threshold' ? edge : null,
         streak_percentile: 95,
         window_mean: mid,
         rate_per_hour: span * 0.004 * (skew % 3 === 0 ? -1 : 1),

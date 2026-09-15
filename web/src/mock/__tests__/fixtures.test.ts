@@ -39,6 +39,8 @@ import {
   makeTelemetrySeries,
   makeWhatIf,
   overridableFeatures,
+  formatNumber,
+  renderClause,
 } from '../fixtures';
 
 const demo = (): Alert => {
@@ -103,6 +105,76 @@ describe('explanation closure', () => {
     const explanation = makeExplanation(demo());
     expect(explanation.caveat).toContain('not proof of physical cause');
     expect(explanation.sentence).not.toContain(explanation.caveat);
+  });
+});
+
+describe('the R24 rendering invariants', () => {
+  it('reports direction as the sign of the shap value, corpus-wide', () => {
+    const mismatches: string[] = [];
+    let contributions = 0;
+    for (const alert of allAlerts()) {
+      for (const kind of ['lgbm', 'rf'] as const) {
+        for (const entry of makeExplanation(alert, kind).contributions) {
+          contributions += 1;
+          if (entry.shap > 0 !== (entry.direction === 'up'))
+            mismatches.push(`${alert.alert_id}/${kind}/${entry.feature}`);
+        }
+      }
+    }
+    // The force plot puts `up` right with a ▲ while the waterfall bar's side
+    // comes from the signed shap: disagreement draws the bar under the wrong
+    // glyph, and a feature task cannot patch it from outside `src/mock`.
+    expect(mismatches).toEqual([]);
+    expect(contributions).toBe(allAlerts().length * 2 * TOP_K);
+  });
+
+  it('claims a threshold crossing only where the value really crossed', () => {
+    const inconsistent: string[] = [];
+    for (const alert of allAlerts()) {
+      for (const kind of ['lgbm', 'rf'] as const) {
+        for (const entry of makeExplanation(alert, kind).contributions) {
+          if (entry.framing !== 'threshold') continue;
+          const { value, threshold, direction, sentence } = entry;
+          if (value === null || threshold === null) {
+            inconsistent.push(`${entry.feature}: threshold framing needs both numbers`);
+            continue;
+          }
+          const crossed = direction === 'up' ? value > threshold : value < threshold;
+          const worded = direction === 'up' ? 'normal ceiling' : 'normal floor';
+          if (!crossed) inconsistent.push(`${entry.feature}: ${value} vs ${threshold}`);
+          if (!sentence.includes(worded))
+            inconsistent.push(`${entry.feature}: ${sentence}`);
+          // The rendered numbers are the ones being compared, and neither of them
+          // collapses to `0` on the way to the screen.
+          if (!sentence.includes(formatNumber(value)))
+            inconsistent.push(`${entry.feature}: value missing from "${sentence}"`);
+          if (!sentence.includes(formatNumber(threshold)))
+            inconsistent.push(`${entry.feature}: threshold missing from "${sentence}"`);
+        }
+      }
+    }
+    expect(inconsistent).toEqual([]);
+  });
+
+  it('prints a sub-unit magnitude to three significant digits, never as 0', () => {
+    expect(formatNumber(0.0004)).toBe('0.0004');
+    expect(formatNumber(0.00042361)).toBe('0.000424');
+    expect(formatNumber(0.031)).toBe('0.031');
+    expect(formatNumber(0)).toBe('0');
+    expect(formatNumber(-0.0042)).toBe('-0.0042');
+    expect(formatNumber(48.1)).toBe('48.1');
+    expect(formatNumber(2540)).toBe('2,540');
+  });
+
+  it('drops the percentile phrase when the feature has no rank yet', () => {
+    const ranked = catalogFor('ims')[1];
+    if (!ranked) throw new Error('the ims catalogue must carry a ranked feature');
+    expect(ranked.framing).toBe('percentile');
+    expect(renderClause('ims', ranked)).toContain('percentile');
+    const unranked = { ...ranked, percentile: null };
+    const clause = renderClause('ims', unranked);
+    expect(clause).not.toContain('percentile');
+    expect(clause).toContain('no rank over this machine');
   });
 });
 
