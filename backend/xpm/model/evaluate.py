@@ -432,7 +432,7 @@ PLANT_CAVEATS: Mapping[PlantId, str] = {
         "positive-rich (see the base rate above): read PR-AUC against that base "
         "rate, not against the AI4I one. A model that generalises to other "
         "bearings is not something this dataset can demonstrate. Read the "
-        "near-perfect numbers below with that in mind: the held-out positives are "
+        "near-perfect numbers above with that in mind: the held-out positives are "
         "the last hours of the same degradation ramp whose earlier hours are in "
         "the training split, so separating them is easy by construction. This is "
         "a statement about the dataset, not a claim about the model."
