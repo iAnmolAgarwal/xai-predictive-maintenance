@@ -1,6 +1,6 @@
 # Orchestrator checkpoint (auto-maintained; read this first after /compact or resume)
 
-Updated: 2026-09-15 16:05 IST — Phase 3 closed; Phase 4 backend critical path in flight.
+Updated: 2026-09-15 17:20 IST — Phase 4: T-API + seven T-WEB-* builders in flight.
 
 ## Where we are
 - Phase 1, 2, 3 DONE and merged: T-FEATURES, T-REPLAY, fix/features-ci,
@@ -15,11 +15,15 @@ Updated: 2026-09-15 16:05 IST — Phase 3 closed; Phase 4 backend critical path 
     backend-builder IN FLIGHT on T-API). When it reports: `git rebase --onto
     main b568e82 feat/api` in wt-api, run the gate, then code-reviewer AND
     security-reviewer, fix loop, merge.
-  - feat/web-mocks (wt-web-mocks, 3 commits, BUILD DONE, code review IN
-    FLIGHT → reviews/web-mocks-code-1.md). On APPROVED: merge, then spawn
-    the seven T-WEB-* feature builders in parallel on feat/web-<name>
-    worktrees off main (briefs: frontend.md §1.2/§2/§4.2/§4.3/§4.5/§6, R23,
-    R24 direction/spans notes, the reviewer's fixture map).
+  - MERGED since: fix/explain-ci (golden rtol 1e-12; CI green), feat/web-mocks
+    (T-WEB-MOCKS, review 1 NEEDS_WORK → fix pass → review 2 APPROVED).
+  - Seven T-WEB-* frontend-builders IN FLIGHT, one per worktree
+    wt-web-{plant-floor,machine-detail,shap-viz,alert-feed,playback,whatif,
+    model-compare} on branches feat/web-<name> off main (post web-mocks).
+    Shared brief: scratchpad/briefs/web-common.md; ports 5500–5569. Each
+    needs code-reviewer AND ux-reviewer, fix loop, then merge one at a time
+    (rebase each onto main before merging; they only touch their own
+    directory + one e2e spec, so conflicts are not expected).
   - Rulings added this session: R23 (mock ownership), R24 (SHAP additivity
     5e-3 + grammar additions), R25 (warm-up: no scoring while NaN).
   - T-INFRA follow-ups pending (fold into T-NODERED's infra brief): `make
